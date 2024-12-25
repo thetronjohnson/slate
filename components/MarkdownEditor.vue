@@ -25,6 +25,7 @@
         :editor="editor"
         @add-link="handleAddLink"
         @add-image="handleAddImage"
+        @add-workspace-image="handleWorkspaceImage"
         @close="showContextMenu = false"
       />
       <!-- Scrollable Editor Content -->
@@ -56,6 +57,15 @@
         @close="showImageUrlDialog = false"
         @submit="handleImageUrlSubmit"
       />
+
+      <!-- Image Edit Dialog -->
+      <ImageEditDialog
+        v-if="showImageEditDialog"
+        :initial-alt="selectedImage.alt"
+        :initial-url="selectedImage.url"
+        @close="showImageEditDialog = false"
+        @submit="handleImageEdit"
+      />
     </ClientOnly>
   </div>
 </template>
@@ -74,6 +84,10 @@ import EditorContextMenu from './EditorContextMenu.vue'
 import LinkDialog from './LinkDialog.vue'
 import ImageDialog from './ImageDialog.vue'
 import ImageUrlDialog from './ImageUrlDialog.vue'
+import ImageEditDialog from './ImageEditDialog.vue'
+import { useEditor } from '~/composables/useEditor'
+import { useWorkspace } from '~/composables/useWorkspace'
+import path from 'path'
 
 const props = defineProps<{
   modelValue: string
@@ -83,7 +97,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const editor = ref<Editor>()
+const { editor } = useEditor()
+const workspace = useWorkspace()
+
 const editorContainer = ref<HTMLElement>()
 
 const showToolbar = ref(false)
@@ -100,6 +116,8 @@ const selectedText = ref('')
 
 const showImageDialog = ref(false)
 const showImageUrlDialog = ref(false)
+const showImageEditDialog = ref(false)
+const selectedImage = ref({ alt: '', url: '', node: null })
 
 function parseFrontmatter(content: string) {
   const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/
@@ -199,7 +217,7 @@ onBeforeUnmount(() => {
 })
 
 onMounted(() => {
-  editor.value = new Editor({
+  const newEditor = new Editor({
     extensions: [
       StarterKit.configure({
         heading: {
@@ -224,6 +242,58 @@ onMounted(() => {
         inline: false,
         HTMLAttributes: {
           class: 'rounded-lg'
+        },
+        renderHTML(props) {
+          const { src, alt } = props
+          let imageSrc
+          if (src.startsWith('http')) {
+            imageSrc = src
+          } else if (src.startsWith('workspace://')) {
+            imageSrc = src
+            // Get absolute path for permission check
+            const cleanPath = src.replace('workspace://', '')
+            const absolutePath = path.join(workspace.value, cleanPath)
+            
+            ipcRenderer.invoke('check-image-access', absolutePath)
+              .then(result => {
+                if (!result.readable) {
+                  console.error(`Image access error: ${result.error}`)
+                  const img = document.querySelector(`img[src="${imageSrc}"]`)
+                  if (img) {
+                    img.classList.add('image-error')
+                    img.title = `Error loading image: ${result.error}`
+                  }
+                }
+              })
+          } else {
+            // For any other path, convert to workspace:// protocol
+            const cleanPath = src.replace(/^\//, '')
+            imageSrc = `workspace://${cleanPath}`
+          }
+          
+          return ['img', { 
+            ...props, 
+            src: imageSrc || src,
+            draggable: false,
+            onError: "this.classList.add('image-error'); this.title='Failed to load image'",
+            loading: 'lazy',
+            crossorigin: 'anonymous'
+          }]
+        },
+        parseHTML() {
+          return [
+            {
+              tag: 'img',
+              getAttrs: dom => {
+                const element = dom as HTMLImageElement
+                return {
+                  src: element.getAttribute('src'),
+                  alt: element.getAttribute('alt'),
+                  title: element.getAttribute('title')
+                }
+              }
+            }
+          ]
         }
       }),
       Markdown.configure({
@@ -321,9 +391,28 @@ onMounted(() => {
         }
 
         return false
+      },
+      handleDOMEvents: {
+        dblclick: (view, event) => {
+          const target = event.target as HTMLElement
+          if (target.tagName === 'IMG') {
+            const node = view.state.doc.nodeAt(view.posAtDOM(target, 0))
+            if (node) {
+              selectedImage.value = {
+                alt: node.attrs.alt || '',
+                url: node.attrs.src || '',
+                node
+              }
+              showImageEditDialog.value = true
+              return true
+            }
+          }
+          return false
+        }
       }
     }
   })
+  editor.value = newEditor
 })
 
 // Watch for external content changes
@@ -426,11 +515,44 @@ async function handleImageSubmit({ type, url, file, altText }: {
 
 // Handle image URL submission
 function handleImageUrlSubmit({ url, altText }: { url: string, altText: string }) {
+  let finalUrl = url
+  if (!url.startsWith('http')) {
+    const cleanPath = url.startsWith('/') ? url.slice(1) : url
+    finalUrl = `workspace://${cleanPath}`
+  }
+  
   editor.value?.chain()
     .focus()
-    .insertContent(`![${altText}](${url})`)
+    .insertContent(`![${altText}](${finalUrl})`)
     .run()
   showImageUrlDialog.value = false
+}
+
+// Handle image edit submission
+function handleImageEdit({ altText, url }: { altText: string, url: string }) {
+  if (!editor.value) return
+  
+  let finalUrl = url
+  if (!url.startsWith('http')) {
+    const cleanPath = url.startsWith('/') ? url.slice(1) : url
+    finalUrl = `workspace://${cleanPath}`
+  }
+  
+  const { state, dispatch } = editor.value.view
+  const { tr } = state
+  
+  state.doc.descendants((node, pos) => {
+    if (node === selectedImage.value.node) {
+      tr.setNodeMarkup(pos, undefined, {
+        ...node.attrs,
+        alt: altText,
+        src: finalUrl
+      })
+      dispatch(tr)
+      return false
+    }
+    return true
+  })
 }
 
 // Initial template content with proper line breaks
@@ -503,6 +625,50 @@ function hello() {
 ## Use three dashes:
 
 Start writing below this guide. You can delete it anytime.`
+
+async function handleWorkspaceImage() {
+  const { ipcRenderer } = window.require('electron')
+  
+  // Get current workspace
+  const currentWorkspace = await ipcRenderer.invoke('get-workspace')
+  console.log('Current workspace:', currentWorkspace)
+  
+  if (!currentWorkspace) {
+    alert('Please select a workspace first')
+    showContextMenu.value = false
+    return
+  }
+  
+  try {
+    const result = await ipcRenderer.invoke('show-open-dialog', {
+      title: 'Select Image from Workspace',
+      defaultPath: currentWorkspace,
+      filters: [
+        { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }
+      ],
+      properties: ['openFile']
+    })
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      const imagePath = result.filePaths[0]
+      // Get relative path by removing workspace path
+      const relativePath = imagePath
+        .replace(currentWorkspace, '')  // Remove workspace path
+        .replace(/^\//, '')             // Remove leading slash
+        .replace(/\\/g, '/')            // Convert Windows backslashes to forward slashes
+      
+      editor.value?.chain()
+        .focus()
+        .insertContent(`![](workspace://${relativePath})`)
+        .run()
+    }
+  } catch (error) {
+    console.error('Error selecting workspace image:', error)
+    alert('Failed to add image from workspace. Please ensure you have a valid workspace selected.')
+  }
+  
+  showContextMenu.value = false
+}
 </script>
 
 <style>
@@ -709,5 +875,17 @@ Start writing below this guide. You can delete it anytime.`
 .editor-content .frontmatter {
   @apply bg-slate-50/50 p-4 rounded-lg mb-6 font-mono text-sm text-slate-600;
   white-space: pre-wrap;
+}
+
+/* Image error state */
+.editor-content img.image-error {
+  @apply border-red-200 bg-red-50;
+  min-height: 100px;
+  position: relative;
+}
+
+.editor-content img.image-error::after {
+  content: '⚠️ Image load error';
+  @apply absolute inset-0 flex items-center justify-center text-sm text-red-500;
 }
 </style> 

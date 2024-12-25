@@ -52,6 +52,14 @@
       <Icon name="ph:image" class="w-4 h-4 text-slate-500" />
       Image from URL
     </button>
+    
+    <button
+      @click="$emit('add-workspace-image')"
+      class="w-full text-left px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 rounded flex items-center gap-2"
+    >
+      <Icon name="ph:folder-open" class="w-4 h-4" />
+      Add Image from Workspace
+    </button>
   </div>
 </template>
 

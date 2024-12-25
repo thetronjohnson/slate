@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, protocol, net } = require('electron')
 const fs = require('fs').promises
+const fsSync = require('fs')
 const path = require('path')
 const Store = require('electron-store')
 
@@ -18,6 +19,58 @@ const store = new Store({
 
 // Declare mainWindow in the global scope
 let mainWindow = null
+
+// Register secure custom protocol
+app.whenReady().then(() => {
+  protocol.registerFileProtocol('workspace', (request, callback) => {
+    try {
+      const workspace = store.get('workspace')
+      if (!workspace) {
+        throw new Error('No workspace selected')
+      }
+
+      const url = request.url.replace('workspace://', '')
+      const decodedUrl = decodeURIComponent(url)
+      const relativePath = decodedUrl
+        .replace(/^\//, '')
+        .replace(/\\/g, '/')
+      
+      const filePath = path.join(workspace, relativePath)
+      
+      console.log('Protocol handler:', {
+        requestUrl: request.url,
+        decodedUrl,
+        relativePath,
+        filePath
+      })
+
+      // Verify the file is within workspace
+      if (!filePath.startsWith(workspace)) {
+        throw new Error('Access denied: File outside workspace')
+      }
+
+      callback({ path: filePath })
+    } catch (error) {
+      console.error('Workspace protocol error:', error)
+      callback({ error: -2 })
+    }
+  })
+
+  // Register protocol as secure and bypassing CSP
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'workspace',
+      privileges: {
+        standard: true,
+        supportFetchAPI: true,
+        secure: true,
+        bypassCSP: true,
+        corsEnabled: true,
+        stream: true
+      }
+    }
+  ])
+})
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -298,6 +351,133 @@ ipcMain.handle('get-image', async (event, imagePath) => {
     return buffer
   } catch (error) {
     console.error('Error reading image:', error)
+    throw error
+  }
+})
+
+// Add PDF export handler
+ipcMain.handle('export-pdf', async (event, { content, workspace, filename }) => {
+  try {
+    // Create a hidden window for PDF generation
+    const pdfWindow = new BrowserWindow({
+      width: 800,
+      height: 600,
+      show: false,
+      webPreferences: {
+        nodeIntegration: true
+      }
+    })
+
+    // Load content into the window
+    await pdfWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+      <html>
+        <head>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+              padding: 40px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            pre {
+              background: #f1f1f1;
+              padding: 10px;
+              border-radius: 4px;
+            }
+            img {
+              max-width: 100%;
+            }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `)}`)
+
+    // Generate PDF
+    const pdfPath = path.join(workspace, `${filename}.pdf`)
+    const data = await pdfWindow.webContents.printToPDF({
+      printBackground: true,
+      margin: {
+        top: 36,
+        bottom: 36,
+        left: 36,
+        right: 36
+      }
+    })
+
+    // Save PDF
+    await fs.writeFile(pdfPath, data)
+
+    // Clean up
+    pdfWindow.close()
+
+    return { success: true, path: pdfPath }
+  } catch (error) {
+    console.error('Error exporting PDF:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+// Add permission check helper
+async function checkFilePermissions(filePath) {
+  try {
+    await fs.access(filePath, fsSync.constants.R_OK)
+    return true
+  } catch (error) {
+    console.error(`Permission error for ${filePath}:`, error)
+    return false
+  }
+}
+
+// Add image read handler with permission check
+ipcMain.handle('check-image-access', async (event, imagePath) => {
+  try {
+    console.log('Checking image access for:', imagePath)
+    
+    // Check if file exists first
+    try {
+      await fs.access(imagePath)
+    } catch (error) {
+      console.error('File does not exist:', imagePath)
+      return {
+        exists: false,
+        readable: false,
+        error: 'File not found'
+      }
+    }
+    
+    const hasPermission = await checkFilePermissions(imagePath)
+    console.log('Has permission:', hasPermission)
+    
+    if (!hasPermission) {
+      throw new Error('No read permission')
+    }
+    
+    const stats = await fs.stat(imagePath)
+    return {
+      exists: true,
+      readable: true,
+      size: stats.size
+    }
+  } catch (error) {
+    console.error('Image access error:', error)
+    return {
+      exists: false,
+      readable: false,
+      error: error.message
+    }
+  }
+})
+
+// Add file selection dialog handler
+ipcMain.handle('show-open-dialog', async (event, options) => {
+  try {
+    const result = await dialog.showOpenDialog(options)
+    return result
+  } catch (error) {
+    console.error('Error showing open dialog:', error)
     throw error
   }
 })

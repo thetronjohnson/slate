@@ -221,6 +221,15 @@
                 <span class="text-sm text-slate-400" v-if="lastSaved">
                   Saved {{ lastSaved }}
                 </span>
+                <!-- Export PDF Button -->
+                <button 
+                  class="text-sm flex items-center gap-2 px-3 py-1.5 rounded-md text-slate-500 hover:bg-slate-50 transition-all duration-200"
+                  @click="handleExport"
+                  :disabled="!currentFile"
+                >
+                  <Icon name="ph:file-pdf" class="w-4 h-4" />
+                  Export
+                </button>
                 <button 
                   class="text-sm flex items-center gap-2 px-3 py-1.5 rounded-md transition-all duration-200"
                   :class="hasUnsavedChanges ? 'text-blue-600 hover:bg-blue-50' : 'text-slate-500 hover:bg-slate-50'"
@@ -368,6 +377,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { useEditor } from '~/composables/useEditor'
 
 interface File {
   name: string
@@ -376,6 +386,7 @@ interface File {
   lastSaved?: string
 }
 
+const { editor } = useEditor()
 const workspace = ref<string | null>(null)
 const files = ref<File[]>([])
 const currentFile = ref<File | null>(null)
@@ -935,6 +946,36 @@ onBeforeUnmount(() => {
     localStorage.setItem(`lastOpenedFile-${workspace.value}`, currentFile.value.path)
   }
 })
+
+// Add export function
+async function handleExport() {
+  if (!currentFile.value || !workspace.value || !editor.value) return
+  
+  try {
+    const { ipcRenderer } = window.require('electron')
+    
+    // Get filename without extension
+    const filename = currentFile.value.name?.replace('.md', '') || 'document'
+    
+    // Get HTML content from editor
+    const content = editor.value.getHTML()
+    
+    const result = await ipcRenderer.invoke('export-pdf', {
+      content,
+      workspace: workspace.value,
+      filename
+    })
+    
+    if (result.success) {
+      alert('PDF exported successfully to Workspace Folder')
+    } else {
+      throw new Error(result.error)
+    }
+  } catch (error) {
+    console.error('Error exporting PDF:', error)
+    alert('Failed to export PDF. Please try again.')
+  }
+}
 </script>
 
 <style>
