@@ -27,7 +27,9 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      enableRemoteModule: true
+      enableRemoteModule: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false
     },
     backgroundColor: '#ffffff'
   })
@@ -71,16 +73,16 @@ ipcMain.handle('get-workspace', () => {
   return store.get('workspace')
 })
 
+// Update the select-workspace handler
 ipcMain.handle('select-workspace', async () => {
   try {
-    const result = await dialog.showOpenDialog({
-      properties: ['openDirectory']
-    })
+    const result = await dialog.showOpenDialog(workspaceDialogOptions)
     
     if (!result.canceled && result.filePaths.length > 0) {
       const workspace = result.filePaths[0]
+      await ensureDirectoryExists(workspace)
       store.set('workspace', workspace)
-      // Emit workspace change event to all windows
+      
       if (mainWindow) {
         mainWindow.webContents.send('workspace-changed', workspace)
       }
@@ -93,14 +95,56 @@ ipcMain.handle('select-workspace', async () => {
   }
 })
 
+// Register the change-workspace handler
+ipcMain.handle('change-workspace', async () => {
+  try {
+    const result = await dialog.showOpenDialog(workspaceDialogOptions)
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      const workspace = result.filePaths[0]
+      await ensureDirectoryExists(workspace)
+      store.set('workspace', workspace)
+      
+      if (mainWindow) {
+        mainWindow.webContents.send('workspace-changed', workspace)
+      }
+      
+      return { success: true, path: workspace }
+    }
+    return { success: false, path: null }
+  } catch (error) {
+    console.error('Error changing workspace:', error)
+    return { success: false, path: null, error: error.message }
+  }
+})
+
+// Add this helper function
+async function ensureDirectoryExists(dirPath) {
+  try {
+    await fs.access(dirPath)
+  } catch (error) {
+    // Directory doesn't exist, create it
+    await fs.mkdir(dirPath, { recursive: true })
+  }
+}
+
+// Separate the dialog options for reuse
+const workspaceDialogOptions = {
+  properties: ['openDirectory', 'createDirectory'],
+  title: 'Choose or Create Workspace Folder',
+  buttonLabel: 'Choose Folder',
+  message: 'Select an existing folder or create a new one for your workspace',
+  promptToCreate: true,
+}
+
 // File operations
 ipcMain.handle('get-files', async (event, workspace) => {
-  const files = await fs.readdir(workspace)
+  const files = await fs.readdir(workspace, { withFileTypes: true })
   return files
-    .filter(file => file.endsWith('.md'))
+    .filter(file => !file.name.startsWith('.') && file.name.endsWith('.md'))
     .map(file => ({
-      name: file,
-      path: path.join(workspace, file)
+      name: file.name,
+      path: path.join(workspace, file.name)
     }))
 })
 
@@ -110,7 +154,8 @@ ipcMain.handle('read-file', async (event, filePath) => {
 })
 
 ipcMain.handle('save-file', async (event, { path, content }) => {
-  await fs.writeFile(path, content, 'utf-8')
+  // If content is Buffer, write as binary, otherwise as utf-8
+  await fs.writeFile(path, content, content instanceof Buffer ? undefined : 'utf-8')
   return true
 })
 
@@ -162,23 +207,26 @@ ipcMain.handle('create-folder', async (event, folderPath) => {
 ipcMain.handle('get-folder-structure', async (event, workspace) => {
   async function getFiles(dir) {
     const items = await fs.readdir(dir, { withFileTypes: true })
-    const files = await Promise.all(items.map(async item => {
-      const path = `${dir}/${item.name}`
-      if (item.isDirectory()) {
-        const children = await getFiles(path)
+    const files = await Promise.all(items
+      // Filter out hidden files/folders (starting with .)
+      .filter(item => !item.name.startsWith('.'))
+      .map(async item => {
+        const path = `${dir}/${item.name}`
+        if (item.isDirectory()) {
+          const children = await getFiles(path)
+          return {
+            name: item.name,
+            path,
+            type: 'folder',
+            children
+          }
+        }
         return {
           name: item.name,
           path,
-          type: 'folder',
-          children
+          type: item.name.endsWith('.md') ? 'markdown' : 'file'
         }
-      }
-      return {
-        name: item.name,
-        path,
-        type: item.name.endsWith('.md') ? 'markdown' : 'file'
-      }
-    }))
+      }))
     return files.filter(file => file.type === 'folder' || file.type === 'markdown')
   }
   
@@ -222,4 +270,34 @@ ipcMain.handle('get-file-stats', async (event, filePath) => {
     console.error('Error getting file stats:', error)
     throw error // Throw error to handle it in the renderer
   }
-}) 
+})
+
+// Add image handling
+ipcMain.handle('save-image', async (event, file) => {
+  try {
+    const imagesDir = path.join(app.getPath('userData'), 'images')
+    await fs.mkdir(imagesDir, { recursive: true })
+    
+    const filename = `image-${Date.now()}.${file.name?.split('.').pop() || 'png'}`
+    const imagePath = path.join(imagesDir, filename)
+    
+    await fs.writeFile(imagePath, file.buffer)
+    
+    // Return the full file path
+    return `file://${imagePath}`
+  } catch (error) {
+    console.error('Error saving image:', error)
+    throw error
+  }
+})
+
+// Add image reading handler
+ipcMain.handle('get-image', async (event, imagePath) => {
+  try {
+    const buffer = await fs.readFile(imagePath)
+    return buffer
+  } catch (error) {
+    console.error('Error reading image:', error)
+    throw error
+  }
+})

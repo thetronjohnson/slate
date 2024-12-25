@@ -13,6 +13,7 @@
     "electron:preview": "NODE_ENV=production electron ."
   },
   "dependencies": {
+    "@pinia/nuxt": "^0.9.0",
     "@tiptap/extension-image": "^2.10.4",
     "@tiptap/extension-link": "^2.10.4",
     "@tiptap/extension-task-item": "^2.10.4",
@@ -26,12 +27,14 @@
     "js-yaml": "^4.1.0",
     "nuxt": "^3.14.1592",
     "nuxt-icon": "1.0.0-beta.7",
+    "pinia": "^2.3.0",
     "tiptap-markdown": "^0.8.10",
     "vue": "latest",
     "vue-router": "latest"
   },
   "packageManager": "pnpm@9.14.2+sha512.6e2baf77d06b9362294152c851c4f278ede37ab1eba3a55fda317a4a17b209f4dbb973fb250a77abc463a341fcb1f17f17cfa24091c4eb319cda0d9b84278387",
   "devDependencies": {
+    "@iconify-json/ph": "^1.2.2",
     "@nuxtjs/google-fonts": "^3.2.0",
     "@nuxtjs/tailwindcss": "^6.12.2",
     "@tailwindcss/typography": "^0.5.15",

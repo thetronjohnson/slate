@@ -1,22 +1,78 @@
 <template>
-  <div class="min-h-screen bg-white">
+  <div class="min-h-screen bg-white font-manrope">
     <!-- Workspace Selection Modal -->
     <div v-if="!workspace" 
       class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50"
     >
-      <div class="bg-white rounded-xl shadow-xl p-8 max-w-md w-full mx-4">
-        <div class="text-center mb-6">
-          <Icon name="ph:files" class="w-5 h-5 text-blue-500 mx-auto mb-4" />
-          <h2 class="text-2xl font-semibold text-slate-800">Welcome to Slate</h2>
-          <p class="text-slate-600 mt-2">Choose a folder to store your markdown files</p>
+      <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4">
+        <!-- Welcome Header -->
+        <div class="p-8 text-center border-b border-slate-100">
+          <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Icon name="ph:notebook" class="w-6 h-6 text-blue-500" />
+          </div>
+          <h2 class="text-2xl font-semibold text-slate-800 mb-2">Welcome to Slate</h2>
+          <p class="text-slate-600 max-w-sm mx-auto">
+            Your minimal markdown editor for distraction-free writing and note-taking
+          </p>
         </div>
-        <button 
-          @click="selectWorkspace"
-          class="btn btn-primary w-full flex items-center justify-center gap-2 font-medium"
-        >
-          <Icon name="ph:folder-simple" class="w-5 h-5" />
-          Select Workspace Folder
-        </button>
+
+        <!-- Features Grid -->
+        <div class="grid grid-cols-2 gap-4 p-8 border-b border-slate-100">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+              <Icon name="ph:file-text" class="w-4 h-4 text-emerald-500" />
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-slate-800 mb-1">Markdown Support</h3>
+              <p class="text-xs text-slate-500">Write in markdown with live preview and syntax highlighting</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+              <Icon name="ph:folder-simple" class="w-4 h-4 text-purple-500" />
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-slate-800 mb-1">File Organization</h3>
+              <p class="text-xs text-slate-500">Keep your notes organized in folders and subfolders</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <Icon name="ph:keyboard" class="w-4 h-4 text-amber-500" />
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-slate-800 mb-1">Keyboard Friendly</h3>
+              <p class="text-xs text-slate-500">Quick shortcuts and commands for efficient writing</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center flex-shrink-0">
+              <Icon name="ph:paint-brush" class="w-4 h-4 text-rose-500" />
+            </div>
+            <div>
+              <h3 class="text-sm font-medium text-slate-800 mb-1">Minimal Design</h3>
+              <p class="text-xs text-slate-500">Clean interface for distraction-free writing</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Section -->
+        <div class="p-8">
+          <button 
+            @click="selectWorkspace"
+            class="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200"
+          >
+            <Icon name="ph:folder-simple" class="w-5 h-5" />
+            Choose Workspace Folder
+          </button>
+          <p class="text-xs text-slate-500 text-center mt-4">
+            Select an existing folder or create a new one for your workspace. 
+            Use the file explorer's "New Folder" option to create a new workspace.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -79,7 +135,7 @@
 
           <!-- Scrollable File Tree -->
           <div 
-            class="flex-1 overflow-y-auto px-1 overscroll-contain"
+            class="flex-1 overflow-y-auto custom-scrollbar px-1 overscroll-contain"
             v-show="isSidebarOpen"
           >
             <div v-if="!fileTree.length" class="p-4 text-center">
@@ -270,23 +326,25 @@
     >
       <div 
         v-if="showNewFolderModal"
-        class="fixed inset-0 bg-slate-900/10 backdrop-blur-sm flex items-center justify-center z-50"
+        class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-50"
         @click.self="showNewFolderModal = false"
       >
-        <div class="bg-white/80 backdrop-blur-sm rounded-lg shadow-custom border border-slate-200/60 p-4 max-w-sm w-full mx-4">
-          <div class="flex items-center gap-2 mb-3">
-            <Icon name="ph:folder-plus" class="w-4 h-4 text-slate-400" />
-            <h3 class="text-sm font-medium text-slate-900">New Folder</h3>
+        <div class="bg-white rounded-xl shadow-lg border border-slate-200/60 p-6 max-w-sm w-full mx-4">
+          <div class="flex items-center gap-3 mb-4">
+            <Icon name="ph:folder-plus" class="w-4 h-4 text-blue-500" />
+            <h3 class="text-base font-medium text-slate-800">New Folder</h3>
           </div>
-          <input 
-            v-model="newFolderName"
-            type="text"
-            placeholder="Untitled folder"
-            class="w-full px-2 py-1.5 bg-white border border-slate-200/70 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-            @keyup.enter="handleCreateFolder"
-            @keyup.esc="showNewFolderModal = false"
-            ref="newFolderInput"
-          />
+          <div class="relative">
+            <input 
+              v-model="newFolderName"
+              type="text"
+              placeholder="Folder name"
+              class="w-full px-2 py-1.5 bg-white border border-slate-200/70 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+              @keyup.enter="handleCreateFolder"
+              @keyup.esc="showNewFolderModal = false"
+              ref="newFolderInput"
+            />
+          </div>
           <div class="flex justify-end gap-2 mt-3">
             <button 
               @click="showNewFolderModal = false"
@@ -706,12 +764,20 @@ async function changeWorkspace() {
     }
   }
   
-  const newWorkspacePath = await selectWorkspace()
-  if (newWorkspacePath) {
-    workspace.value = newWorkspacePath
-    currentFile.value = null
-    content.value = ''
-    await loadFileTree()
+  try {
+    const { ipcRenderer } = window.require('electron')
+    const result = await ipcRenderer.invoke('change-workspace')
+    
+    if (result.success && result.path) {
+      workspace.value = result.path
+      currentFile.value = null
+      content.value = ''
+      await loadFileTree()
+      showStatus('Workspace changed successfully')
+    }
+  } catch (error) {
+    console.error('Error changing workspace:', error)
+    showStatus('Error changing workspace')
   }
 }
 
@@ -735,6 +801,7 @@ async function handleCreateFolder() {
         showStatus('Error creating folder')
       }
     } catch (error) {
+      console.error('Error creating folder:', error)
       showStatus('Error creating folder')
     }
   }

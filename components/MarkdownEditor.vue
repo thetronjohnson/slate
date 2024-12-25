@@ -1,10 +1,37 @@
 <template>
   <div class="h-full flex flex-col markdown-editor">
     <ClientOnly>
+      <!-- Image Dialog -->
+      <ImageDialog
+        v-if="showImageDialog"
+        @close="showImageDialog = false"
+        @submit="handleImageSubmit"
+      />
+      
+      <!-- Link Dialog -->
+      <LinkDialog
+        v-if="showLinkDialog"
+        :initial-text="selectedText"
+        @close="showLinkDialog = false"
+        @submit="handleLinkSubmit"
+      />
+      
+      <!-- Floating Toolbar -->
+      <EditorContextMenu
+        v-if="showContextMenu"
+        :x="menuX"
+        :y="menuY"
+        :is-visible="showContextMenu"
+        :editor="editor"
+        @add-link="handleAddLink"
+        @add-image="handleAddImage"
+        @close="showContextMenu = false"
+      />
       <!-- Scrollable Editor Content -->
       <div 
-        class="flex-1 overflow-y-auto overscroll-contain px-6 scroll-smooth border-t border-slate-50"
+        class="flex-1 overflow-y-auto overscroll-contain px-6 scroll-smooth border-t border-slate-50 editor-scrollbar"
         ref="editorContainer"
+        @contextmenu="handleContextMenu"
       >
         <div class="container max-w-[720px] mx-auto py-8">
           <div class="mt-2">
@@ -22,6 +49,13 @@
       >
         {{ wordCount }} words
       </div>
+
+      <!-- Image URL Dialog -->
+      <ImageUrlDialog
+        v-if="showImageUrlDialog"
+        @close="showImageUrlDialog = false"
+        @submit="handleImageUrlSubmit"
+      />
     </ClientOnly>
   </div>
 </template>
@@ -34,6 +68,12 @@ import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
 import { onBeforeUnmount, ref, computed, watch, nextTick } from 'vue'
 import yaml from 'js-yaml'
+import { useFloating } from '@floating-ui/vue'
+import { computePosition, flip, shift } from '@floating-ui/dom'
+import EditorContextMenu from './EditorContextMenu.vue'
+import LinkDialog from './LinkDialog.vue'
+import ImageDialog from './ImageDialog.vue'
+import ImageUrlDialog from './ImageUrlDialog.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -45,6 +85,21 @@ const emit = defineEmits<{
 
 const editor = ref<Editor>()
 const editorContainer = ref<HTMLElement>()
+
+const showToolbar = ref(false)
+const toolbarX = ref(0)
+const toolbarY = ref(0)
+const selection = ref({ from: 0, to: 0 })
+
+const showContextMenu = ref(false)
+const menuX = ref(0)
+const menuY = ref(0)
+
+const showLinkDialog = ref(false)
+const selectedText = ref('')
+
+const showImageDialog = ref(false)
+const showImageUrlDialog = ref(false)
 
 function parseFrontmatter(content: string) {
   const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/
@@ -63,6 +118,85 @@ function parseFrontmatter(content: string) {
   
   return { frontmatter: null, markdown: content }
 }
+
+// Track selection changes
+function updateToolbarPosition() {
+  if (!editor.value || !editor.value.view) return
+  
+  const { from, to } = editor.value.state.selection
+  if (from === to) {
+    showToolbar.value = false
+    return
+  }
+  
+  const view = editor.value.view
+  const { top, left } = view.coordsAtPos(from)
+  
+  toolbarY.value = top - 40 // Position above selection
+  toolbarX.value = left
+  showToolbar.value = true
+  selection.value = { from, to }
+}
+
+// Handle link addition
+async function handleAddLink() {
+  showLinkDialog.value = true
+  selectedText.value = editor.value?.state.selection.empty 
+    ? '' 
+    : editor.value?.state.doc.textBetween(
+        editor.value.state.selection.from,
+        editor.value.state.selection.to
+      )
+  showContextMenu.value = false
+}
+
+// Handle image addition
+async function handleAddImage({ type, file }: { type: 'url' | 'file', file?: File }) {
+  showImageUrlDialog.value = true
+  showContextMenu.value = false
+}
+
+// Add context menu handler
+function handleContextMenu(event: MouseEvent) {
+  event.preventDefault()
+  
+  if (!editor.value || !editor.value.view) return
+  
+  const view = editor.value.view
+  const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
+  
+  if (pos) {
+    menuX.value = event.clientX
+    menuY.value = event.clientY
+    showContextMenu.value = true
+    
+    // Set selection at click position
+    view.dispatch(view.state.tr.setSelection(
+      view.state.selection.empty 
+        ? view.state.selection 
+        : view.state.selection.constructor.near(view.state.doc.resolve(pos))
+    ))
+    
+    view.focus()
+  }
+}
+
+// Hide toolbar when clicking outside
+function hideToolbar(event: MouseEvent) {
+  const toolbar = document.querySelector('.floating-toolbar')
+  if (toolbar && !toolbar.contains(event.target as Node)) {
+    showToolbar.value = false
+  }
+}
+
+// Add event listeners
+onMounted(() => {
+  document.addEventListener('click', hideToolbar)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', hideToolbar)
+})
 
 onMounted(() => {
   editor.value = new Editor({
@@ -83,7 +217,8 @@ onMounted(() => {
         HTMLAttributes: {
           class: 'cursor-pointer'
         },
-        validate: href => /^https?:\/\//.test(href)
+        validate: href => /^https?:\/\//.test(href),
+        autolink: false
       }),
       Image.configure({
         inline: false,
@@ -96,14 +231,11 @@ onMounted(() => {
         tightLists: true,
         tightListClass: 'tight',
         bulletListMarker: '-',
-        linkify: true,
+        linkify: false,
         breaks: false,
         transformPastedText: true,
         transformCopiedText: true,
         linkValidator: url => /^https?:\/\//.test(url),
-        transformLink: url => {
-          return url.replace(/\\[\[\]()]/g, match => match.charAt(1))
-        },
         transformPaste: true,
         preserveCursor: true,
         keepMarks: true,
@@ -125,10 +257,13 @@ onMounted(() => {
         ]
       })
     ],
+    onSelectionUpdate: updateToolbarPosition,
     content: props.modelValue,
     onUpdate: ({ editor }) => {
       try {
         let markdown = editor.storage.markdown.getMarkdown()
+        
+        markdown = markdown.replace(/\\(\[|\]|\(|\))/g, '$1')
         
         const originalFrontmatter = parseFrontmatter(props.modelValue).frontmatter
         if (originalFrontmatter) {
@@ -146,10 +281,45 @@ onMounted(() => {
       },
       handlePaste: (view, event) => {
         const text = event.clipboardData?.getData('text/plain')
-        if (text && /^\[.*\]\(.*\)$/.test(text.trim())) {
+        if (!text) return false
+
+        // Handle pasted URLs
+        if (text.match(/^https?:\/\/\S+$/)) {
+          const url = text
+          const title = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]
+          view.dispatch(
+            view.state.tr.insertText(`[${title}](${url})`)
+          )
+          return true
+        }
+
+        // Handle pasted markdown links
+        if (/^\[.*\]\(.*\)$/.test(text.trim())) {
           view.dispatch(view.state.tr.insertText(text))
           return true
         }
+
+        // Extract image URL from clipboard
+        const imageUrl = extractImageUrl(event);
+        
+        if (imageUrl) {
+          // Generate local filename
+          const filename = generateUniqueFilename(imageUrl);
+          
+          // Save image to assets/images/
+          const localPath = `assets/images/${filename}`;
+          
+          // Use relative path in markdown
+          const markdownImage = `![](/${localPath})`;
+          
+          // Insert at cursor position
+          view.dispatch(
+            view.state.tr.insertText(markdownImage)
+          );
+          
+          event.preventDefault();
+        }
+
         return false
       }
     }
@@ -189,18 +359,162 @@ const wordCount = computed(() => {
 onBeforeUnmount(() => {
   editor.value?.destroy()
 })
+
+function handleLinkSubmit({ text, url }: { text: string, url: string }) {
+  if (editor.value) {
+    if (selectedText.value) {
+      // If text was selected, convert it to a link
+      editor.value.chain()
+        .focus()
+        .setLink({ href: url })
+        .run()
+    } else {
+      // If no text was selected, insert new link
+      editor.value.chain()
+        .focus()
+        .insertContent(`[${text}](${url})`)
+        .run()
+    }
+  }
+  showLinkDialog.value = false
+}
+
+async function handleImageSubmit({ type, url, file, altText }: { 
+  type: 'url' | 'file'
+  url?: string
+  file?: File
+  altText: string 
+}) {
+  try {
+    if (type === 'url' && url) {
+      editor.value?.chain()
+        .focus()
+        .setImage({ 
+          src: url,
+          alt: altText,
+          title: altText
+        })
+        .run()
+    } else if (type === 'file' && file) {
+      const { ipcRenderer } = window.require('electron')
+      // Convert File to buffer for electron
+      const arrayBuffer = await file.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      
+      const imagePath = await ipcRenderer.invoke('save-image', {
+        name: file.name,
+        buffer: buffer,
+        type: file.type
+      })
+      
+      editor.value?.chain()
+        .focus()
+        .setImage({ 
+          src: imagePath,
+          alt: altText,
+          title: altText
+        })
+        .run()
+    }
+  } catch (error) {
+    console.error('Error adding image:', error)
+    // Show error to user
+    alert('Failed to add image. Please try again.')
+  }
+  showImageDialog.value = false
+}
+
+// Handle image URL submission
+function handleImageUrlSubmit({ url, altText }: { url: string, altText: string }) {
+  editor.value?.chain()
+    .focus()
+    .insertContent(`![${altText}](${url})`)
+    .run()
+  showImageUrlDialog.value = false
+}
+
+// Initial template content with proper line breaks
+const initialContent = `# Welcome to Your New Document
+
+This is a quick guide to Markdown formatting:
+
+## Basic Syntax
+
+### Headers
+
+Use # for different levels:
+
+# Heading 1
+
+## Heading 2
+
+### Heading 3
+
+### Emphasis
+
+*This text is italic*
+
+
+**This text is bold**
+
+
+***This text is bold and italic***
+
+### Lists
+
+Unordered list:
+
+- Item 1
+- Item 2
+  - Nested item
+  - Another nested item
+
+Numbered list:
+
+1. First item
+2. Second item
+3. Third item
+
+### Links and Images
+
+[Link text](URL)
+
+![Image alt text](Image URL)
+
+### Code
+
+For inline code, use single backticks: \`like this\`
+
+Code block:
+
+\`\`\`javascript
+function hello() {
+  console.log('Hello, World!');
+}
+\`\`\`
+
+### Quotes
+
+> This is a blockquote
+> You can have multiple lines
+
+### Horizontal Rule
+
+## Use three dashes:
+
+Start writing below this guide. You can delete it anytime.`
 </script>
 
 <style>
 /* Base editor styles */
 .markdown-editor {
-  @apply bg-white;
-  font-family: 'Poppins', sans-serif;
+  @apply bg-white font-manrope;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 .editor-content {
+  @apply font-manrope;
   min-height: calc(100vh - 8rem);
   font-size: 14px;
   line-height: 1.6;
@@ -242,21 +556,30 @@ onBeforeUnmount(() => {
 
 /* Better code blocks */
 .editor-content :where(code:not(pre code)) {
-  @apply bg-slate-100/80 text-slate-700 px-1.5 py-0.5 rounded text-[13px];
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  @apply bg-slate-100/80 text-slate-700 rounded text-[13px] font-mono;
+  padding: 0.2em 0.4em;
   font-feature-settings: "calt" 1, "ss02" 1;
+  &::before, &::after {
+    content: none !important;
+  }
 }
 
 .editor-content :where(pre) {
   @apply bg-slate-900 text-slate-50 p-4 rounded-lg my-4 overflow-x-auto shadow-sm;
   font-feature-settings: "calt" 1, "ss02" 1;
+  &::before, &::after {
+    content: none !important;
+  }
 }
 
 .editor-content :where(pre code) {
-  @apply text-[13px];
+  @apply text-[13px] block;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   line-height: 1.6;
   tab-size: 2;
+  &::before, &::after {
+    content: none !important;
+  }
 }
 
 /* Better blockquotes */
@@ -277,6 +600,8 @@ onBeforeUnmount(() => {
   display: block;
   margin-left: auto;
   margin-right: auto;
+  max-height: 500px;
+  object-fit: contain;
 }
 
 /* Better selection */

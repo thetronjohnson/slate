@@ -1,12 +1,15 @@
 <template>
-  <div class="relative" :class="{ 'ml-2': !isRoot && isSidebarOpen }">
+  <div 
+    class="relative font-manrope"
+    :class="{ 'ml-2': !isRoot && isSidebarOpen }"
+  >
     <div 
       class="flex items-center gap-1.5 px-2 py-1.5 rounded-md group relative transition-all"
       :class="[
-        'hover:bg-slate-50/80',
+        'hover:bg-surface-100',
         !isSidebarOpen && 'justify-center',
-        currentFile?.path === item.path && 'bg-blue-50/50 text-blue-600',
-        isHovered && 'bg-slate-50'
+        currentFile?.path === item.path && 'bg-primary-50 text-primary-600',
+        isHovered && 'bg-surface-50'
       ]"
       @mouseenter="isHovered = true"
       @mouseleave="isHovered = false"
@@ -102,25 +105,32 @@
       </div>
     </div>
     
-    <div 
-      v-if="item.type === 'folder' && item.children"
-      v-show="isOpen && isSidebarOpen"
-      class="mt-0.5"
+    <Transition
+      enter-active-class="transition-all duration-200 ease-out overflow-hidden"
+      leave-active-class="transition-all duration-200 ease-in overflow-hidden"
+      @enter="onEnter"
+      @leave="onLeave"
     >
-      <FileTreeItem 
-        v-for="child in item.children"
-        :key="child.path"
-        :item="child"
-        :current-file="currentFile"
-        :is-root="false"
-        :isSidebarOpen="isSidebarOpen"
-        @select="$emit('select', $event)"
-        @delete="$emit('delete', $event)"
-        @newFile="$emit('newFile', $event)"
-        @newFolder="$emit('newFolder', $event)"
-        @rename="(oldPath, newPath) => $emit('rename', oldPath, newPath)"
-      />
-    </div>
+      <div 
+        v-if="item.type === 'folder' && item.children"
+        v-show="isOpen && isSidebarOpen"
+        class="mt-0.5 custom-scrollbar"
+      >
+        <FileTreeItem 
+          v-for="child in item.children"
+          :key="child.path"
+          :item="child"
+          :current-file="currentFile"
+          :is-root="false"
+          :isSidebarOpen="isSidebarOpen"
+          @select="$emit('select', $event)"
+          @delete="$emit('delete', $event)"
+          @newFile="$emit('newFile', $event)"
+          @newFolder="$emit('newFolder', $event)"
+          @rename="(oldPath, newPath) => $emit('rename', oldPath, newPath)"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -217,6 +227,28 @@ function handleRename() {
   
   isEditing.value = false
 }
+
+function onEnter(el: Element) {
+  const height = el.scrollHeight
+  ;(el as HTMLElement).style.maxHeight = '0'
+  
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      ;(el as HTMLElement).style.maxHeight = `${height}px`
+    })
+  })
+}
+
+function onLeave(el: Element) {
+  const height = el.scrollHeight
+  ;(el as HTMLElement).style.maxHeight = `${height}px`
+  
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      ;(el as HTMLElement).style.maxHeight = '0'
+    })
+  })
+}
 </script> 
 
 <style scoped>
@@ -224,12 +256,12 @@ function handleRename() {
 
 /* Component specific styles */
 .file-item {
-  @apply text-[#1d1d1f]/70 hover:text-[#1d1d1f]/90;
+  @apply text-neutral-600 hover:text-neutral-800;
   transition: var(--transition-ease);
 }
 
 .folder-item {
-  @apply text-[#1d1d1f]/80 font-medium;
+  @apply text-neutral-700 font-medium;
   transition: var(--transition-ease);
 }
 
@@ -239,12 +271,12 @@ function handleRename() {
 
 /* Icon colors */
 .icon-file {
-  @apply text-[#1d1d1f]/30;
+  @apply text-neutral-400;
   transition: var(--transition-ease);
 }
 
 .icon-folder {
-  @apply text-[#1d1d1f]/40;
+  @apply text-neutral-500;
   transition: var(--transition-ease);
 }
 
@@ -254,26 +286,87 @@ function handleRename() {
   transition: var(--transition-ease);
 }
 
-/* Optional: Add custom scrollbar styles */
+/* Modern Scrollbar Design */
 .sidebar-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(203, 213, 225, 0.4) transparent;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease;
 }
 
+.sidebar-scrollbar:hover {
+  scrollbar-color: rgba(100, 116, 139, 0.2) transparent;
+}
+
+/* Webkit Scrollbar Styles */
 .sidebar-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-track {
   background: transparent;
+  border-radius: 8px;
+  margin: 4px;
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(203, 213, 225, 0.4);
-  border-radius: 3px;
+  background-color: transparent;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.2);
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(203, 213, 225, 0.6);
+  background-color: rgba(100, 116, 139, 0.3);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:active {
+  background-color: rgba(100, 116, 139, 0.4);
+}
+
+/* Dark theme variant */
+:root[data-theme="dark"] .sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme="dark"] .sidebar-scrollbar::-webkit-scrollbar-thumb:active {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Add these animation styles */
+.transition-all {
+  transition-property: all;
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}
+
+.ease-in {
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+
+.ease-out {
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Also add a transition for the caret icon */
+button .icon {
+  @apply transition-transform duration-200;
+}
+
+button[aria-expanded="true"] .icon {
+  @apply rotate-90;
 }
 </style> 

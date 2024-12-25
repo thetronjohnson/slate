@@ -42,5 +42,8 @@ export default defineNuxtConfig({
   },
   css: [
     '@/assets/styles/global.css'
-  ]
+  ],
+  vite: {
+    assetsInclude: ['**/*.ttf'],
+  }
 })
