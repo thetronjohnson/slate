@@ -1,22 +1,24 @@
 <template>
   <div class="h-full flex flex-col markdown-editor">
     <ClientOnly>
-      <!-- Editor Content -->
+      <!-- Scrollable Editor Content -->
       <div 
-        class="flex-1 overflow-y-auto px-4 scroll-smooth pt-24" 
+        class="flex-1 overflow-y-auto overscroll-contain px-6 scroll-smooth border-t border-slate-50"
         ref="editorContainer"
       >
-        <div class="container max-w-[650px] mx-auto">
-          <editor-content 
-            :editor="editor" 
-            class="editor-content"
-          />
+        <div class="container max-w-[720px] mx-auto py-8">
+          <div class="mt-2">
+            <editor-content 
+              :editor="editor" 
+              class="editor-content"
+            />
+          </div>
         </div>
       </div>
 
-      <!-- Word Count -->
+      <!-- Word Count - Floating -->
       <div 
-        class="fixed bottom-4 right-4 text-sm text-slate-400 font-medium bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-slate-200/50"
+        class="fixed bottom-6 right-6 text-xs text-slate-500 font-medium bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-sm border border-slate-200/50 transition-all duration-200 hover:bg-white/90 select-none"
       >
         {{ wordCount }} words
       </div>
@@ -27,7 +29,11 @@
 <script setup lang="ts">
 import { Editor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
-import { onBeforeUnmount, ref, computed } from 'vue'
+import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
+import { Markdown } from 'tiptap-markdown'
+import { onBeforeUnmount, ref, computed, watch, nextTick } from 'vue'
+import yaml from 'js-yaml'
 
 const props = defineProps<{
   modelValue: string
@@ -39,36 +45,145 @@ const emit = defineEmits<{
 
 const editor = ref<Editor>()
 const editorContainer = ref<HTMLElement>()
-const wordCount = computed(() => {
-  if (!editor.value) return 0
-  const text = editor.value.getText()
-  return text.trim().split(/\s+/).filter(Boolean).length
-})
+
+function parseFrontmatter(content: string) {
+  const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/
+  const match = content.match(frontmatterRegex)
+  
+  if (match) {
+    try {
+      const frontmatter = yaml.load(match[1])
+      const markdown = match[2]
+      return { frontmatter, markdown }
+    } catch (e) {
+      console.error('Error parsing frontmatter:', e)
+      return { frontmatter: null, markdown: content }
+    }
+  }
+  
+  return { frontmatter: null, markdown: content }
+}
 
 onMounted(() => {
   editor.value = new Editor({
     extensions: [
       StarterKit.configure({
         heading: {
-          levels: [1, 2, 3, 4]
+          levels: [1, 2, 3, 4, 5, 6]
         },
         codeBlock: {
+          languageClassPrefix: 'language-',
           HTMLAttributes: {
             class: 'code-block'
           }
         }
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'cursor-pointer'
+        },
+        validate: href => /^https?:\/\//.test(href)
+      }),
+      Image.configure({
+        inline: false,
+        HTMLAttributes: {
+          class: 'rounded-lg'
+        }
+      }),
+      Markdown.configure({
+        html: true,
+        tightLists: true,
+        tightListClass: 'tight',
+        bulletListMarker: '-',
+        linkify: true,
+        breaks: false,
+        transformPastedText: true,
+        transformCopiedText: true,
+        linkValidator: url => /^https?:\/\//.test(url),
+        transformLink: url => {
+          return url.replace(/\\[\[\]()]/g, match => match.charAt(1))
+        },
+        transformPaste: true,
+        preserveCursor: true,
+        keepMarks: true,
+        hardBreak: false,
+        transformSerialize: (markdown) => {
+          const { frontmatter, markdown: content } = parseFrontmatter(markdown)
+          if (frontmatter) {
+            return `---\n${yaml.dump(frontmatter)}---\n\n${content}`
+          }
+          return markdown
+        },
+        transformParseRules: [
+          {
+            find: /^---\n([\s\S]*?)\n---\n/,
+            handler: ({ content, match }) => {
+              return content.slice(match[0].length)
+            }
+          }
+        ]
       })
     ],
     content: props.modelValue,
-    onUpdate: () => {
-      emit('update:modelValue', editor.value?.getHTML() || '')
+    onUpdate: ({ editor }) => {
+      try {
+        let markdown = editor.storage.markdown.getMarkdown()
+        
+        const originalFrontmatter = parseFrontmatter(props.modelValue).frontmatter
+        if (originalFrontmatter) {
+          markdown = `---\n${yaml.dump(originalFrontmatter)}---\n\n${markdown}`
+        }
+        
+        emit('update:modelValue', markdown)
+      } catch (error) {
+        console.error('Error in editor update:', error)
+      }
     },
     editorProps: {
       attributes: {
         class: 'prose prose-slate max-w-none min-h-[300px]'
+      },
+      handlePaste: (view, event) => {
+        const text = event.clipboardData?.getData('text/plain')
+        if (text && /^\[.*\]\(.*\)$/.test(text.trim())) {
+          view.dispatch(view.state.tr.insertText(text))
+          return true
+        }
+        return false
       }
     }
   })
+})
+
+// Watch for external content changes
+watch(() => props.modelValue, (newContent) => {
+  if (editor.value && editor.value.storage.markdown.getMarkdown() !== newContent) {
+    try {
+      const selection = editor.value.state.selection
+      const { from, to } = selection
+      
+      const { markdown } = parseFrontmatter(newContent)
+      editor.value.commands.setContent(markdown)
+      
+      if (from !== undefined && to !== undefined && from <= editor.value.state.doc.content.size) {
+        nextTick(() => {
+          editor.value?.commands.setTextSelection({
+            from: Math.min(from, editor.value.state.doc.content.size),
+            to: Math.min(to, editor.value.state.doc.content.size)
+          })
+        })
+      }
+    } catch (error) {
+      console.error('Error updating editor content:', error)
+    }
+  }
+}, { deep: true })
+
+const wordCount = computed(() => {
+  if (!editor.value) return 0
+  const text = editor.value.getText()
+  return text.trim().split(/\s+/).filter(Boolean).length
 })
 
 onBeforeUnmount(() => {
@@ -77,142 +192,197 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
+/* Base editor styles */
 .markdown-editor {
   @apply bg-white;
+  font-family: 'Poppins', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .editor-content {
-  @apply py-8;
   min-height: calc(100vh - 8rem);
+  font-size: 14px;
+  line-height: 1.6;
+  color: #374151;
 }
 
-/* Typography styles */
+/* Typography improvements */
 .editor-content :where(h1, h2, h3, h4, h5, h6) {
-  @apply font-serif;
+  @apply font-medium text-slate-900;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+  line-height: 1.3;
 }
 
-.editor-content :where(h1) {
-  @apply text-3xl font-bold mt-8 mb-6 text-slate-900 tracking-tight;
-}
-
-.editor-content :where(h2) {
-  @apply text-2xl font-semibold mt-8 mb-4 text-slate-900 tracking-tight;
-}
-
-.editor-content :where(h3) {
-  @apply text-xl font-semibold mt-6 mb-4 text-slate-900;
-}
-
-.editor-content :where(h4) {
-  @apply text-lg font-semibold mt-6 mb-3 text-slate-800;
-}
+.editor-content :where(h1) { @apply text-4xl font-bold; }
+.editor-content :where(h2) { @apply text-3xl font-bold; }
+.editor-content :where(h3) { @apply text-2xl font-bold; }
+.editor-content :where(h4) { @apply text-xl font-bold; }
+.editor-content :where(h5, h6) { @apply text-lg font-bold; }
 
 .editor-content :where(p) {
-  @apply text-lg text-slate-700 leading-relaxed mb-6 font-serif;
+  @apply text-base leading-relaxed text-slate-700;
+  margin-bottom: 1.25em;
 }
 
+/* List improvements */
 .editor-content :where(ul, ol) {
-  @apply my-6 ml-6 font-serif;
+  @apply my-4 ml-6 text-sm text-slate-700;
+  line-height: 1.7;
 }
 
 .editor-content :where(li) {
-  @apply text-lg text-slate-700 mb-2;
+  @apply mb-1;
 }
 
-.editor-content :where(blockquote) {
-  @apply border-l-2 border-slate-200 pl-6 my-8 italic text-slate-600 font-serif;
+.editor-content :where(li p) {
+  @apply my-1;
 }
 
-/* Code blocks */
+/* Better code blocks */
 .editor-content :where(code:not(pre code)) {
-  @apply bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-sm font-mono;
+  @apply bg-slate-100/80 text-slate-700 px-1.5 py-0.5 rounded text-[13px];
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-feature-settings: "calt" 1, "ss02" 1;
 }
 
 .editor-content :where(pre) {
-  @apply bg-slate-900 text-slate-50 p-4 rounded-lg my-6 overflow-x-auto shadow-lg;
+  @apply bg-slate-900 text-slate-50 p-4 rounded-lg my-4 overflow-x-auto shadow-sm;
+  font-feature-settings: "calt" 1, "ss02" 1;
 }
 
 .editor-content :where(pre code) {
-  @apply bg-transparent text-inherit p-0 font-mono text-sm;
+  @apply text-[13px];
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  line-height: 1.6;
+  tab-size: 2;
 }
 
-.editor-content :where(hr) {
-  @apply my-8 border-t-2 border-slate-200;
+/* Better blockquotes */
+.editor-content :where(blockquote) {
+  @apply border-l-2 border-slate-200 pl-4 my-6 italic text-slate-600;
+  margin-left: 0;
+  margin-right: 0;
 }
 
-/* Selection styles */
-::selection {
-  @apply bg-slate-100;
+/* Link improvements */
+.editor-content a {
+  @apply text-blue-600 hover:text-blue-700 underline decoration-blue-400/30 hover:decoration-blue-400 transition-all duration-150 ease-in-out;
 }
 
-/* Remove outline */
-.editor-content :where(*) {
-  @apply focus:outline-none focus:ring-0;
+/* Image enhancements */
+.editor-content img {
+  @apply max-w-full rounded-lg shadow-sm my-6 border border-slate-200/50;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-/* Placeholder styles */
+/* Better selection */
+.editor-content ::selection {
+  @apply bg-blue-100/70;
+}
+
+/* Empty state improvements */
 .editor-content p.is-editor-empty:first-child::before {
-  @apply text-slate-300 font-serif transition-opacity duration-200;
-  content: "Start writing... (Use Markdown: # for heading, ** for bold, * for italic)";
+  @apply text-slate-400/90;
+  content: "Start writing...";
   float: left;
   pointer-events: none;
   height: 0;
-  opacity: 0.8;
 }
 
-.editor-content p.is-editor-empty:first-child:hover::before {
-  opacity: 0.5;
+/* Table improvements */
+.editor-content table {
+  @apply w-full my-6 text-sm;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
-/* Improved blinking cursor */
-.editor-content p.is-editor-empty:first-child::after {
-  content: '';
-  @apply inline-block w-[2px] h-[1.4em] align-middle bg-slate-400;
-  margin-left: 2px;
-  animation: cursor-blink 1.2s ease-in-out infinite;
-  position: relative;
-  top: 2px;
+.editor-content th,
+.editor-content td {
+  @apply border border-slate-200 px-4 py-2;
 }
 
-@keyframes cursor-blink {
-  0%, 100% { 
-    opacity: 0;
-    transform: translateY(0);
-  }
-  50% { 
-    opacity: 1;
-    transform: translateY(-1px);
-  }
+.editor-content th {
+  @apply bg-slate-50/80 font-medium text-slate-700;
 }
 
-/* Make cursor more visible on light backgrounds */
-.editor-content p.is-editor-empty:first-child:hover::after {
-  @apply bg-slate-500;
+/* Task list improvements */
+.editor-content ul[data-type="taskList"] {
+  @apply list-none pl-0;
 }
 
-/* Smooth transition for cursor color */
-.editor-content p.is-editor-empty:first-child::after {
-  transition: background-color 0.2s ease;
+.editor-content ul[data-type="taskList"] li {
+  @apply flex items-start gap-2;
 }
 
-/* Improve initial content styling */
-.editor-content h1:first-of-type {
-  @apply text-2xl text-slate-800 mb-6;
+.editor-content ul[data-type="taskList"] input[type="checkbox"] {
+  @apply mt-1.5 transition-all duration-150 ease-in-out;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  cursor: pointer;
 }
 
-.editor-content ul:first-of-type {
-  @apply bg-slate-50 rounded-lg p-6 my-6;
+.editor-content ul[data-type="taskList"] input[type="checkbox"]:checked {
+  @apply bg-blue-500 border-blue-500;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E");
 }
 
-.editor-content ul:first-of-type li {
-  @apply mb-3 text-slate-600;
+/* Better spacing between elements */
+.editor-content > * + * {
+  margin-top: 1em;
 }
 
-.editor-content ul:first-of-type code {
-  @apply bg-white border border-slate-200;
+/* Improved cursor */
+.editor-content .ProseMirror {
+  outline: none;
+  caret-color: #3b82f6;
 }
 
-.editor-content hr {
-  @apply my-8 border-slate-200;
+/* Improved focus ring */
+.editor-content .ProseMirror-focused {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Better scrolling */
+.overflow-y-auto {
+  scrollbar-gutter: stable;
+}
+
+/* Improved scroll behavior */
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+/* Smoother scrolling */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* First element spacing */
+.editor-content > *:first-child {
+  margin-top: 0;
+}
+
+/* Word count hover */
+.word-count {
+  @apply hover:bg-slate-50 transition-all duration-150 ease-in-out;
+}
+
+/* Horizontal rule improvements */
+.editor-content :where(hr) {
+  @apply my-8 border-0 h-px bg-slate-200;
+}
+
+/* Add styles for frontmatter section */
+.editor-content .frontmatter {
+  @apply bg-slate-50/50 p-4 rounded-lg mb-6 font-mono text-sm text-slate-600;
+  white-space: pre-wrap;
 }
 </style> 

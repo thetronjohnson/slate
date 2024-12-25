@@ -13,15 +13,20 @@
     "electron:preview": "NODE_ENV=production electron ."
   },
   "dependencies": {
+    "@tiptap/extension-image": "^2.10.4",
     "@tiptap/extension-link": "^2.10.4",
     "@tiptap/extension-task-item": "^2.10.4",
     "@tiptap/extension-task-list": "^2.10.4",
     "@tiptap/pm": "^2.10.4",
     "@tiptap/starter-kit": "^2.10.4",
     "@tiptap/vue-3": "^2.10.4",
+    "@types/js-yaml": "^4.0.9",
     "@vueuse/core": "^12.2.0",
+    "electron-store": "8.1.0",
+    "js-yaml": "^4.1.0",
     "nuxt": "^3.14.1592",
     "nuxt-icon": "1.0.0-beta.7",
+    "tiptap-markdown": "^0.8.10",
     "vue": "latest",
     "vue-router": "latest"
   },

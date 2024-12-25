@@ -1,0 +1,63 @@
+/* Base button styles */
+.btn {
+  @apply px-4 py-2 text-base rounded-lg transition-all duration-200;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Button variants */
+.btn-primary {
+  @apply bg-indigo-500 text-white shadow-sm;
+  @apply hover:bg-indigo-600 active:bg-indigo-700;
+  @apply disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply bg-white text-[#1d1d1f]/80 shadow-sm border border-black/[0.06];
+  @apply hover:bg-slate-50 active:bg-slate-100;
+}
+
+.btn-ghost {
+  @apply bg-transparent text-[#1d1d1f]/60;
+  @apply hover:bg-black/[0.03] hover:text-[#1d1d1f]/70;
+}
+
+.btn-icon {
+  @apply p-2 rounded-lg;
+  @apply text-[#1d1d1f]/40 hover:text-[#1d1d1f]/60;
+  @apply hover:bg-black/[0.03];
+  @apply transition-all duration-200;
+}
+
+.btn-danger {
+  @apply text-rose-500/90 hover:text-rose-600;
+  @apply hover:bg-rose-50/60;
+}
+
+/* Button group */
+.btn-group {
+  @apply flex items-center gap-1;
+  @apply bg-white rounded-xl p-1 shadow-sm border border-black/[0.06];
+}
+
+.btn-group .btn {
+  @apply rounded-lg;
+}
+
+/* Button sizes */
+.btn-lg {
+  @apply px-6 py-3 text-lg;
+}
+
+.btn-sm {
+  @apply px-3 py-1.5 text-sm;
+}
+
+/* Icon button sizes */
+.btn-icon-lg {
+  @apply p-3;
+}
+
+.btn-icon-sm {
+  @apply p-1.5;
+} 

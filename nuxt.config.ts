@@ -10,7 +10,7 @@ export default defineNuxtConfig({
         extend: {
           fontFamily: {
             serif: ['Merriweather', 'Georgia', 'serif'],
-            sans: ['Inter', 'system-ui', 'sans-serif'],
+            sans: ['Albert Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
           },
         },
       },
@@ -20,7 +20,7 @@ export default defineNuxtConfig({
   googleFonts: {
     families: {
       Merriweather: [400, 700],
-      Inter: [400, 500, 600],
+      'Albert+Sans': [400, 500, 600],
     },
     display: 'swap',
   },
@@ -28,8 +28,19 @@ export default defineNuxtConfig({
   app: {
     baseURL: process.env.NODE_ENV === 'production' ? './' : '/',
     buildAssetsDir: 'assets',
+    head: {
+      link: [
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap'
+        }
+      ]
+    }
   },
   nitro: {
     preset: 'static'
-  }
+  },
+  css: [
+    '@/assets/styles/global.css'
+  ]
 })
