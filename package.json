@@ -47,7 +47,12 @@
     "mac": {
       "category": "public.app-category.productivity",
       "darkModeSupport": true,
-      "icon": "electron/icons/icon.icns"
+      "icon": "electron/icons/icon.icns",
+      "notarize": {
+        "teamId": "YOUR_TEAM_ID",
+        "appleId": "YOUR_APPLE_ID",
+        "appleIdPassword": "@keychain:AC_PASSWORD"
+      }
     },
     "files": [
       "dist/**/*",
@@ -55,6 +60,12 @@
     ],
     "directories": {
       "output": "release"
-    }
+    },
+    "protocols": [
+      {
+        "name": "workspace",
+        "schemes": ["workspace"]
+      }
+    ]
   }
 }

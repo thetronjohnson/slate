@@ -1,75 +1,91 @@
-# Nuxt Minimal Starter
+# Slate Editor
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A modern, minimal Markdown editor built with Electron and Vue.js. Features workspace-based file management, image support, and real-time preview.
 
-## Setup
+## Features
 
-Make sure to install dependencies:
+- 📝 Full Markdown support
+- 🖼️ Image handling with workspace protocol
+- 📁 Workspace-based file management
+- 🎨 Clean, minimal interface
+- 🔄 Real-time preview
+- 📱 Responsive design
+- 📤 PDF export
 
+## Development
+
+### Prerequisites
+
+- Node.js (v16 or higher)
+- pnpm
+
+### Setup
+
+1. Install dependencies:
 ```bash
-# npm
-npm install
-
-# pnpm
 pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
+2. Run in development mode:
 ```bash
-# npm
-npm run dev
-
-# pnpm
+# Start Nuxt dev server
 pnpm dev
 
-# yarn
-yarn dev
-
-# bun
-bun run dev
+# In another terminal, start Electron
+pnpm electron:dev
 ```
 
-## Production
+### Building
 
-Build the application for production:
-
+Build for production:
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+# Build for macOS
+pnpm electron:build
 ```
 
-Locally preview production build:
+## Project Structure
 
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+```
+.
+├── components/          # Vue components
+├── electron/           # Electron main process
+├── pages/             # Vue pages
+├── composables/       # Vue composables
+├── assets/           # Static assets
+├── build/            # Build configurations
+└── public/           # Public static files
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## Key Technologies
+
+- Electron
+- Vue 3
+- Nuxt 3
+- TipTap
+- Tailwind CSS
+- electron-builder
+
+## Configuration
+
+### Workspace Protocol
+
+The app uses a custom `workspace://` protocol for handling local files. Configure in `electron/main.js`.
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+[MIT License](LICENSE)
+
+## Acknowledgments
+
+- [TipTap](https://tiptap.dev/) for the rich text editor
+- [Electron](https://www.electronjs.org/) for the desktop framework
+- [Vue.js](https://vuejs.org/) for the UI framework
+- [Tailwind CSS](https://tailwindcss.com/) for styling
