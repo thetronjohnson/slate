@@ -1,13 +1,16 @@
 {
-  "name": "nuxt-app",
-  "private": true,
-  "type": "module",
+  "name": "slate-editor",
+  "version": "1.0.0",
+  "main": "electron/main.js",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "electron:dev": "NODE_ENV=development electron .",
+    "electron:build": "nuxt build && electron-builder",
+    "electron:preview": "NODE_ENV=production electron ."
   },
   "dependencies": {
     "@tiptap/extension-link": "^2.10.4",
@@ -26,6 +29,24 @@
   "devDependencies": {
     "@nuxtjs/google-fonts": "^3.2.0",
     "@nuxtjs/tailwindcss": "^6.12.2",
-    "@tailwindcss/typography": "^0.5.15"
+    "@tailwindcss/typography": "^0.5.15",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.yourdomain.slate-editor",
+    "productName": "Slate Editor",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "darkModeSupport": true,
+      "icon": "electron/icons/icon.icns"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    }
   }
 }

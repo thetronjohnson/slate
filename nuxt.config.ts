@@ -23,5 +23,13 @@ export default defineNuxtConfig({
       Inter: [400, 500, 600],
     },
     display: 'swap',
+  },
+  ssr: false,
+  app: {
+    baseURL: process.env.NODE_ENV === 'production' ? './' : '/',
+    buildAssetsDir: 'assets',
+  },
+  nitro: {
+    preset: 'static'
   }
 })
