@@ -48,11 +48,14 @@
       "category": "public.app-category.productivity",
       "darkModeSupport": true,
       "icon": "electron/icons/icon.icns",
-      "notarize": {
-        "teamId": "YOUR_TEAM_ID",
-        "appleId": "YOUR_APPLE_ID",
-        "appleIdPassword": "@keychain:AC_PASSWORD"
-      }
+      "target": ["dir", "dmg"],
+      "arch": ["x64", "arm64"]
+    },
+    "win": {
+      "icon": "public/icons/icon.ico"
+    },
+    "linux": {
+      "icon": "public/icons/icon.png"
     },
     "files": [
       "dist/**/*",
