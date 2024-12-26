@@ -6,7 +6,7 @@
     <div class="text-center">
       <div class="w-20 h-20 mx-auto mb-4 animate-pulse-subtle">
         <img 
-          src="/icons/slate.png" 
+          :src="slateIcon" 
           alt="Slate" 
           class="w-full h-full object-contain animate-float"
         />
@@ -22,6 +22,8 @@
 </template>
 
 <script setup lang="ts">
+import slateIcon from '~/public/icons/slate.png'
+
 defineProps<{
   show: boolean
 }>()

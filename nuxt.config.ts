@@ -36,6 +36,9 @@ export default defineNuxtConfig({
         { name: 'msapplication-TileColor', content: '#ffffff' },
         { name: 'theme-color', content: '#ffffff' }
       ]
+    },
+    static: {
+      prefix: '/'
     }
   },
   nitro: {
@@ -46,7 +49,14 @@ export default defineNuxtConfig({
     preset: 'static'
   },
   vite: {
-    assetsInclude: ['**/*.ttf']
+    assetsInclude: ['**/*.ttf', '**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg'],
+    build: {
+      rollupOptions: {
+        output: {
+          assetFileNames: 'assets/[name].[ext]'
+        }
+      }
+    }
   },
   css: [
     '@/assets/styles/global.css'
