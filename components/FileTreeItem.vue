@@ -1,78 +1,71 @@
 <template>
   <div 
-    class="relative font-manrope"
-    :class="{ 'ml-2': !isRoot && isSidebarOpen }"
+    class="relative px-2 py-1 text-slate-500 font-medium"
+    :class="{ 
+      'ml-2': !isRoot && isSidebarOpen,
+      'text-indigo-700 bg-blue-50 font-medium rounded-md': currentFile?.path === item.path
+    }"
   >
     <div 
-      class="flex items-center gap-1.5 px-2 py-1.5 rounded-md group relative transition-all"
+      class="flex items-center gap-2 group cursor-pointer hover:text-indigo-700"
       :class="[
-        'hover:bg-surface-100',
-        !isSidebarOpen && 'justify-center',
-        currentFile?.path === item.path && 'bg-primary-50 text-primary-600',
-        isHovered && 'bg-surface-50'
+        !isSidebarOpen && 'justify-center'
       ]"
-      @mouseenter="isHovered = true"
-      @mouseleave="isHovered = false"
+      @click="handleClick"
     >
-      <div 
-        class="flex items-center gap-1.5 min-w-0 flex-1 cursor-pointer"
-        @click="handleClick"
+      <button 
+        v-if="item.type === 'folder' && isSidebarOpen"
+        class="flex-shrink-0 p-0.5 -ml-0.5"
+        @click.stop="toggleFolder"
       >
-        <button 
-          v-if="item.type === 'folder' && isSidebarOpen"
-          class="flex-shrink-0"
-          @click.stop="toggleFolder"
-        >
-          <Icon 
-            :name="isOpen ? 'ph:caret-down' : 'ph:caret-right'" 
-            class="w-4 h-4"
-          />
-        </button>
-
         <Icon 
-          :name="item.type === 'folder' ? 'ph:folder' : 'ph:file-text'" 
-          class="w-4 h-4 flex-shrink-0"
-          :class="getIconClass"
+          :name="isOpen ? 'ph:caret-down' : 'ph:caret-right'" 
+          class="w-4 h-4"
         />
-        
-        <div v-if="isSidebarOpen" class="min-w-0 flex-1">
-          <input
-            v-if="isEditing"
-            ref="nameInput"
-            v-model="editedName"
-            type="text"
-            class="w-full px-1 py-0.5 text-sm bg-white border border-blue-500 rounded focus:outline-none"
-            @keyup.enter="handleRename"
-            @blur="handleRename"
-            @keyup.esc="isEditing = false"
-          />
-          <span 
-            v-else
-            class="text-sm truncate block"
-            :class="getTextClass"
-            :title="item.name"
-            @dblclick="startEditing"
-          >
-            {{ item.name }}
-          </span>
-        </div>
+      </button>
+
+      <Icon 
+        :name="item.type === 'folder' ? 'ph:folder' : 'ph:file-text'" 
+        class="w-4 h-4 flex-shrink-0"
+        :class="item.type === 'folder' ? 'text-slate-400' : 'text-slate-400'"
+      />
+      
+      <div v-if="isSidebarOpen" class="min-w-0 flex-1">
+        <input
+          v-if="isEditing"
+          ref="nameInput"
+          v-model="editedName"
+          type="text"
+          class="w-full px-1.5 py-0.5 text-sm bg-white border border-blue-400 rounded focus:outline-none"
+          @keyup.enter="handleRename"
+          @blur="handleRename"
+          @keyup.esc="isEditing = false"
+        />
+        <span 
+          v-else
+          class="text-sm truncate block"
+          :title="item.name"
+          @dblclick="startEditing"
+        >
+          {{ item.name }}
+        </span>
       </div>
 
       <div 
-        v-if="isSidebarOpen && isHovered"
-        class="flex items-center gap-0.5 ml-1 flex-shrink-0"
+        v-if="isSidebarOpen"
+        class="invisible group-hover:visible flex items-center gap-2 ml-2 flex-shrink-0"
       >
         <template v-if="item.type === 'folder'">
           <button 
             @click.stop="$emit('newFile', item.path)"
-            class="p-1 text-slate-400 hover:text-slate-600 rounded-sm"
+            class="p-1 text-slate-400 hover:text-slate-600"
             title="New file"
           >
             <Icon name="ph:file-plus" class="w-4 h-4" />
           </button>
           <button 
             @click.stop="$emit('newFolder', item.path)"
-            class="p-1 text-slate-400 hover:text-slate-600 rounded-sm"
+            class="p-1 text-slate-400 hover:text-slate-600"
             title="New folder"
           >
             <Icon name="ph:folder-plus" class="w-4 h-4" />
@@ -81,14 +74,14 @@
         <template v-else>
           <button 
             @click.stop="startEditing"
-            class="p-1 text-slate-400 hover:text-slate-600 rounded-sm"
+            class="p-1 text-slate-400 hover:text-slate-600"
             title="Rename"
           >
             <Icon name="ph:pencil-simple" class="w-4 h-4" />
           </button>
           <button 
             @click.stop="handleDelete"
-            class="p-1 text-slate-400 hover:text-red-500 rounded-sm"
+            class="p-1 text-slate-400 hover:text-red-500"
             title="Delete"
           >
             <Icon name="ph:trash" class="w-4 h-4" />
@@ -343,6 +336,8 @@ function onLeave(el: Element) {
 /* Add these animation styles */
 .transition-all {
   transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 .duration-200 {
@@ -368,5 +363,20 @@ button .icon {
 
 button[aria-expanded="true"] .icon {
   @apply rotate-90;
+}
+
+/* Add new animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Keep only essential transitions */
+.group-hover\:flex {
+  transition: opacity 0.15s ease;
 }
 </style> 

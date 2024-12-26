@@ -481,3 +481,18 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
     throw error
   }
 })
+
+// Add workspace existence check handler
+ipcMain.handle('check-workspace-exists', async (event, workspacePath) => {
+  try {
+    await fs.access(workspacePath)
+    return true
+  } catch (error) {
+    return false
+  }
+})
+
+// Add this to your existing workspace handlers
+ipcMain.handle('clear-workspace', () => {
+  store.delete('workspace')
+})

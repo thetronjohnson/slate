@@ -245,13 +245,37 @@
               </header>
             </div>
   
-            <!-- Scrollable Editor -->
+            <!-- Empty State or Editor -->
             <div class="flex-1 overflow-hidden">
-          <MarkdownEditor 
-            v-model="content" 
-            class="h-full"
-            @update:modelValue="handleContentUpdate"
-          />
+              <template v-if="isWorkspaceEmpty">
+                <div class="h-full flex items-center justify-center">
+                  <div class="text-center max-w-md mx-auto px-6">
+                    <div class="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+                      <Icon name="ph:file-text" class="w-6 h-6 text-slate-400" />
+                    </div>
+                    <h3 class="text-lg font-medium text-slate-800 mb-2">
+                      No files yet
+                    </h3>
+                    <p class="text-sm text-slate-600 mb-6">
+                      Create your first markdown file to start writing
+                    </p>
+                    <button 
+                      @click="showNewFileModal = true"
+                      class="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                    >
+                      <Icon name="ph:plus" class="w-4 h-4" />
+                      Create New File
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <MarkdownEditor 
+                  v-model="content" 
+                  class="h-full"
+                  @update:modelValue="handleContentUpdate"
+                />
+              </template>
             </div>
           </div>
         </div>
@@ -376,7 +400,7 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+  import { ref, onMounted, watch, nextTick, onBeforeUnmount, computed } from 'vue'
   import { useEditor } from '~/composables/useEditor'
   
   interface File {
@@ -556,7 +580,7 @@
     if (window.require) {
       const { ipcRenderer } = window.require('electron')
       try {
-        const fileContent = await ipcRenderer.invoke('read-file', file.path)
+        const fileContent = file.content || await ipcRenderer.invoke('read-file', file.path)
         
         currentFile.value = file
         title.value = file.name.replace('.md', '')
@@ -574,7 +598,11 @@
     if (window.require) {
       const { ipcRenderer } = window.require('electron')
       try {
-        const contentToSave = content.value || file.content || MARKDOWN_TEMPLATE
+        // For existing files, use content.value
+        // For new files, use file.content (template)
+        const contentToSave = currentFile.value 
+          ? content.value 
+          : (file.content || MARKDOWN_TEMPLATE)
         
         await ipcRenderer.invoke('save-file', {
           path: file.path,
@@ -584,6 +612,7 @@
         const stats = await ipcRenderer.invoke('get-file-stats', file.path)
         const timeString = stats ? formatDateTime(stats.mtime) : ''
         
+        // Update content values after save
         originalContent.value = contentToSave
         content.value = contentToSave
         hasUnsavedChanges.value = false
@@ -675,18 +704,18 @@
     const newFile: File = {
       name: fileName,
       path: filePath,
-      content: MARKDOWN_TEMPLATE
+      content: MARKDOWN_TEMPLATE  // Always use template for new files
     }
     
     try {
-      // First save the file with template
+      // Save the new file with template content
       await saveFile(newFile)
-      // Then load the file tree
       await loadFileTree()
       showNewFileModal.value = false
       newFileName.value = ''
       selectedFolderPath.value = null
-      // Finally open the file
+      
+      // Open the new file
       await openFile(newFile)
       showStatus('File created')
     } catch (error) {
@@ -732,6 +761,19 @@
     const { ipcRenderer } = window.require('electron')
     
     try {
+      // Check if workspace exists
+      const exists = await checkWorkspaceExists()
+      if (!exists) {
+        // Reset workspace and show selection dialog
+        workspace.value = null
+        store.delete('workspace') // Clear from electron-store
+        localStorage.removeItem(`lastOpenedFile-${workspace.value}`)
+        currentFile.value = null
+        content.value = ''
+        fileTree.value = []
+        return
+      }
+
       const structure = await ipcRenderer.invoke('get-folder-structure', workspace.value)
       fileTree.value = structure
   
@@ -976,6 +1018,73 @@
       alert('Failed to export PDF. Please try again.')
     }
   }
+  
+  async function checkWorkspaceExists(): Promise<boolean> {
+    if (!window.require || !workspace.value) return false
+    
+    const { ipcRenderer } = window.require('electron')
+    try {
+      const exists = await ipcRenderer.invoke('check-workspace-exists', workspace.value)
+      if (!exists) {
+        // Clear workspace from store
+        await ipcRenderer.invoke('clear-workspace')
+        workspace.value = null
+        return false
+      }
+      return true
+    } catch (error) {
+      console.error('Workspace check error:', error)
+      return false
+    }
+  }
+  
+  // Add periodic workspace check
+  onMounted(() => {
+    if (window.require) {
+      const { ipcRenderer } = window.require('electron')
+      
+      // Load initial workspace
+      const initWorkspace = async () => {
+        const savedWorkspace = await ipcRenderer.invoke('get-workspace')
+        if (savedWorkspace) {
+          const exists = await checkWorkspaceExists()
+          if (!exists) {
+            workspace.value = null
+            await ipcRenderer.invoke('clear-workspace')
+            localStorage.removeItem(`lastOpenedFile-${savedWorkspace}`)
+          } else {
+            workspace.value = savedWorkspace
+            await loadFileTree()
+          }
+        }
+      }
+
+      initWorkspace()
+
+      // Check workspace existence periodically
+      const checkInterval = setInterval(async () => {
+        if (workspace.value) {
+          const exists = await checkWorkspaceExists()
+          if (!exists) {
+            workspace.value = null
+            currentFile.value = null
+            content.value = ''
+            fileTree.value = []
+            localStorage.removeItem(`lastOpenedFile-${workspace.value}`)
+          }
+        }
+      }, 5000)
+
+      // Clean up interval on component unmount
+      onBeforeUnmount(() => {
+        clearInterval(checkInterval)
+      })
+    }
+  })
+  
+  const isWorkspaceEmpty = computed(() => {
+    return workspace.value && fileTree.value.length === 0
+  })
   </script>
   
   <style>
