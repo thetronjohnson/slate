@@ -1,5 +1,8 @@
 <template>
     <div class="min-h-screen bg-white font-manrope">
+      <!-- Splash Screen -->
+      <SplashScreen :show="isLoading" />
+  
       <!-- Workspace Selection Modal -->
       <div v-if="!workspace" 
         class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50"
@@ -432,6 +435,7 @@
   const fileTree = ref<Array<any>>([])
   const selectedFolderPath = ref<string | null>(null)
   const lastOpenedFilePath = ref('')
+  const isLoading = ref(true)
   
   const MARKDOWN_TEMPLATE = `# Welcome to Your New Document
   
@@ -1085,6 +1089,25 @@
   const isWorkspaceEmpty = computed(() => {
     return workspace.value && fileTree.value.length === 0
   })
+  
+  // Hide splash screen after initial load
+  onMounted(() => {
+    setTimeout(() => {
+      isLoading.value = false
+    }, 1000)
+  })
+  
+  // Show splash screen on force reload
+  if (window.require) {
+    const { ipcRenderer } = window.require('electron')
+    ipcRenderer.on('app-reload', () => {
+      isLoading.value = true
+      setTimeout(() => {
+        isLoading.value = false
+        window.location.reload()
+      }, 500)
+    })
+  }
   </script>
   
   <style>

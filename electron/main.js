@@ -496,3 +496,11 @@ ipcMain.handle('check-workspace-exists', async (event, workspacePath) => {
 ipcMain.handle('clear-workspace', () => {
   store.delete('workspace')
 })
+
+// Add this to your existing IPC handlers
+ipcMain.handle('force-reload', () => {
+  mainWindow.webContents.send('app-reload')
+  setTimeout(() => {
+    mainWindow.reload()
+  }, 500)
+})
