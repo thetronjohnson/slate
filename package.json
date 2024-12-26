@@ -1,6 +1,11 @@
 {
-  "name": "slate-editor",
+  "name": "slate",
   "version": "1.0.0",
+  "description": "A markdown editor for distraction-free writing",
+  "author": {
+    "name": "Your Name",
+    "email": "your.email@example.com"
+  },
   "main": "electron/main.js",
   "scripts": {
     "build": "nuxt build",
@@ -43,13 +48,21 @@
   },
   "build": {
     "appId": "com.yourdomain.slate-editor",
-    "productName": "Slate Editor",
+    "productName": "Slate",
     "mac": {
       "category": "public.app-category.productivity",
       "darkModeSupport": true,
       "icon": "electron/icons/icon.icns",
-      "target": ["dir", "dmg"],
-      "arch": ["x64", "arm64"]
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        },
+        {
+          "target": "dir",
+          "arch": ["arm64", "x64"]
+        }
+      ]
     },
     "win": {
       "icon": "public/icons/icon.ico"
