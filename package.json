@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "A markdown editor for distraction-free writing",
   "author": {
-    "name": "Your Name",
-    "email": "your.email@example.com"
+    "name": "Kiran Johns",
+    "email": "kiranjohns369@gmail.com"
   },
   "main": "electron/main.js",
   "scripts": {
