@@ -38,7 +38,7 @@
           <div class="mt-2">
             <editor-content 
               :editor="editor" 
-              class="editor-content"
+              class="prose prose-slate max-w-none px-8 py-6 font-editor"
             />
           </div>
         </div>

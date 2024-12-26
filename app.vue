@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen bg-white font-manrope">
+    <div class="min-h-screen bg-white">
       <!-- Splash Screen -->
       <SplashScreen :show="isLoading" />
   
@@ -450,8 +450,11 @@
   ### Heading 3
   
   ### Emphasis
+  
   *This text is italic*
+
   **This text is bold**
+
   ***This text is bold and italic***
   
   ### Lists
@@ -468,6 +471,8 @@
   
   ### Links and Images
   [Link text](URL)
+
+
   ![Image alt text](image URL)
   
   ### Code
@@ -485,7 +490,9 @@
   > You can have multiple lines
   
   ### Horizontal Rule
+
   Use three dashes:
+
   ---
   
   Start writing below this guide. You can delete it anytime.`

@@ -15,6 +15,5 @@
 
 .title {
   @apply text-center text-sm text-slate-600 leading-[48px] font-medium;
-  font-family: 'Poppins', sans-serif;
 }
 </style> 

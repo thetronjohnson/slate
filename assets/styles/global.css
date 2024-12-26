@@ -1,19 +1,42 @@
 /* Import other stylesheets */
 @import './buttons.css';
 
-/* Import local Manrope font */
+/* Merriweather font faces */
 @font-face {
-  font-family: 'Manrope';
-  src: url('../fonts/Manrope-Variable.ttf') format('truetype-variations');
-  font-weight: 100 900;
-  font-display: swap;
+  font-family: 'Merriweather';
+  src: url('../fonts/Merriweather-Regular.ttf') format('truetype');
+  font-weight: 400;
   font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Merriweather';
+  src: url('../fonts/Merriweather-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Merriweather';
+  src: url('../fonts/Merriweather-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Merriweather';
+  src: url('../fonts/Merriweather-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
 }
 
 /* Global styles */
 :root {
   --transition-ease: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: 'Manrope', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   background-color: #f5f5f5;
@@ -126,7 +149,6 @@
 
 /* Typography with paper-like colors */
 .heading-hero {
-  @apply font-manrope;
   font-size: 1.875rem;
   line-height: 2.25rem;
   font-weight: 600;
@@ -135,7 +157,6 @@
 }
 
 .heading-xl {
-  @apply font-manrope;
   font-size: 1.25rem;
   line-height: 1.75rem;
   font-weight: 500;
@@ -144,7 +165,6 @@
 }
 
 .heading-lg {
-  @apply font-manrope;
   font-size: 1.125rem;
   line-height: 1.75rem;
   font-weight: 500;
@@ -153,7 +173,6 @@
 }
 
 .text-md {
-  @apply font-manrope;
   font-size: 0.9375rem;
   line-height: 1.5rem;
   color: #374151;
@@ -161,7 +180,6 @@
 }
 
 .text-default {
-  @apply font-manrope;
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: #4b5563;
@@ -340,4 +358,62 @@
   background: var(--primary-600);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px var(--shadow-primary);
+}
+
+/* Editor specific styles */
+.editor-content {
+  font-family: 'Merriweather', Georgia, serif;
+  line-height: 1.8;
+  color: #374151;
+}
+
+/* Remove editor focus outline */
+.ProseMirror {
+  outline: 0 !important;
+  border: none !important;
+  -webkit-appearance: none !important;
+}
+
+.ProseMirror-focused {
+  outline: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+}
+
+.editor-content h1,
+.editor-content h2,
+.editor-content h3,
+.editor-content h4,
+.editor-content h5,
+.editor-content h6 {
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  color: #1f2937;
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+.editor-content strong {
+  font-weight: 700;
+}
+
+.editor-content em {
+  font-style: italic;
+}
+
+.editor-content strong em,
+.editor-content em strong {
+  font-weight: 700;
+  font-style: italic;
+}
+
+/* Additional editor focus removal */
+.editor-content [contenteditable]:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.editor-content .ProseMirror-selectednode {
+  outline: none !important;
 } 

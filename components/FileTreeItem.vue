@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="relative px-2 py-1 text-slate-500 font-medium"
+    class="relative px-2 py-1 text-slate-500"
     :class="{ 
       'ml-2': !isRoot && isSidebarOpen,
       'text-indigo-700 bg-blue-50 font-medium rounded-md': currentFile?.path === item.path
