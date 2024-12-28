@@ -76,7 +76,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
-import { onBeforeUnmount, ref, computed, watch, nextTick } from 'vue'
+import { onBeforeUnmount, ref, computed, watch, nextTick, shallowRef } from 'vue'
 import yaml from 'js-yaml'
 import { useFloating } from '@floating-ui/vue'
 import { computePosition, flip, shift } from '@floating-ui/dom'
@@ -217,202 +217,202 @@ onBeforeUnmount(() => {
 })
 
 onMounted(() => {
-  const newEditor = new Editor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3, 4, 5, 6]
-        },
-        codeBlock: {
-          languageClassPrefix: 'language-',
+  // Defer editor initialization
+  nextTick(() => {
+    const newEditor = new Editor({
+      // Add performance options
+      enableInputRules: false,
+      enablePasteRules: false,
+      extensions: [
+        StarterKit.configure({
+          heading: {
+            levels: [1, 2, 3, 4, 5, 6]
+          },
+        }),
+        Link.configure({
+          openOnClick: false,
           HTMLAttributes: {
-            class: 'code-block'
-          }
-        }
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'cursor-pointer'
-        },
-        validate: href => /^https?:\/\//.test(href),
-        autolink: false
-      }),
-      Image.configure({
-        inline: false,
-        HTMLAttributes: {
-          class: 'rounded-lg'
-        },
-        renderHTML(props) {
-          const { src, alt } = props
-          let imageSrc
-          if (src.startsWith('http')) {
-            imageSrc = src
-          } else if (src.startsWith('workspace://')) {
-            imageSrc = src
-            // Get absolute path for permission check
-            const cleanPath = src.replace('workspace://', '')
-            const absolutePath = path.join(workspace.value, cleanPath)
+            class: 'cursor-pointer'
+          },
+          validate: href => /^https?:\/\//.test(href),
+          autolink: false
+        }),
+        Image.configure({
+          inline: false,
+          HTMLAttributes: {
+            class: 'rounded-lg'
+          },
+          renderHTML(props) {
+            const { src, alt } = props
+            let imageSrc
+            if (src.startsWith('http')) {
+              imageSrc = src
+            } else if (src.startsWith('workspace://')) {
+              imageSrc = src
+              // Get absolute path for permission check
+              const cleanPath = src.replace('workspace://', '')
+              const absolutePath = path.join(workspace.value, cleanPath)
+              
+              ipcRenderer.invoke('check-image-access', absolutePath)
+                .then(result => {
+                  if (!result.readable) {
+                    console.error(`Image access error: ${result.error}`)
+                    const img = document.querySelector(`img[src="${imageSrc}"]`)
+                    if (img) {
+                      img.classList.add('image-error')
+                      img.title = `Error loading image: ${result.error}`
+                    }
+                  }
+                })
+            } else {
+              // For any other path, convert to workspace:// protocol
+              const cleanPath = src.replace(/^\//, '')
+              imageSrc = `workspace://${cleanPath}`
+            }
             
-            ipcRenderer.invoke('check-image-access', absolutePath)
-              .then(result => {
-                if (!result.readable) {
-                  console.error(`Image access error: ${result.error}`)
-                  const img = document.querySelector(`img[src="${imageSrc}"]`)
-                  if (img) {
-                    img.classList.add('image-error')
-                    img.title = `Error loading image: ${result.error}`
+            return ['img', { 
+              ...props, 
+              src: imageSrc || src,
+              draggable: false,
+              onError: "this.classList.add('image-error'); this.title='Failed to load image'",
+              loading: 'lazy',
+              crossorigin: 'anonymous'
+            }]
+          },
+          parseHTML() {
+            return [
+              {
+                tag: 'img',
+                getAttrs: dom => {
+                  const element = dom as HTMLImageElement
+                  return {
+                    src: element.getAttribute('src'),
+                    alt: element.getAttribute('alt'),
+                    title: element.getAttribute('title')
                   }
                 }
-              })
-          } else {
-            // For any other path, convert to workspace:// protocol
-            const cleanPath = src.replace(/^\//, '')
-            imageSrc = `workspace://${cleanPath}`
+              }
+            ]
           }
-          
-          return ['img', { 
-            ...props, 
-            src: imageSrc || src,
-            draggable: false,
-            onError: "this.classList.add('image-error'); this.title='Failed to load image'",
-            loading: 'lazy',
-            crossorigin: 'anonymous'
-          }]
-        },
-        parseHTML() {
-          return [
+        }),
+        Markdown.configure({
+          html: true,
+          tightLists: true,
+          tightListClass: 'tight',
+          bulletListMarker: '-',
+          linkify: false,
+          breaks: false,
+          transformPastedText: true,
+          transformCopiedText: true,
+          linkValidator: url => /^https?:\/\//.test(url),
+          transformPaste: true,
+          preserveCursor: true,
+          keepMarks: true,
+          hardBreak: false,
+          transformSerialize: (markdown) => {
+            const { frontmatter, markdown: content } = parseFrontmatter(markdown)
+            if (frontmatter) {
+              return `---\n${yaml.dump(frontmatter)}---\n\n${content}`
+            }
+            return markdown
+          },
+          transformParseRules: [
             {
-              tag: 'img',
-              getAttrs: dom => {
-                const element = dom as HTMLImageElement
-                return {
-                  src: element.getAttribute('src'),
-                  alt: element.getAttribute('alt'),
-                  title: element.getAttribute('title')
-                }
+              find: /^---\n([\s\S]*?)\n---\n/,
+              handler: ({ content, match }) => {
+                return content.slice(match[0].length)
               }
             }
           ]
-        }
-      }),
-      Markdown.configure({
-        html: true,
-        tightLists: true,
-        tightListClass: 'tight',
-        bulletListMarker: '-',
-        linkify: false,
-        breaks: false,
-        transformPastedText: true,
-        transformCopiedText: true,
-        linkValidator: url => /^https?:\/\//.test(url),
-        transformPaste: true,
-        preserveCursor: true,
-        keepMarks: true,
-        hardBreak: false,
-        transformSerialize: (markdown) => {
-          const { frontmatter, markdown: content } = parseFrontmatter(markdown)
-          if (frontmatter) {
-            return `---\n${yaml.dump(frontmatter)}---\n\n${content}`
+        })
+      ],
+      onSelectionUpdate: updateToolbarPosition,
+      content: props.modelValue,
+      onUpdate: ({ editor }) => {
+        try {
+          let markdown = editor.storage.markdown.getMarkdown()
+          
+          markdown = markdown.replace(/\\(\[|\]|\(|\))/g, '$1')
+          
+          const originalFrontmatter = parseFrontmatter(props.modelValue).frontmatter
+          if (originalFrontmatter) {
+            markdown = `---\n${yaml.dump(originalFrontmatter)}---\n\n${markdown}`
           }
-          return markdown
+          
+          emit('update:modelValue', markdown)
+        } catch (error) {
+          console.error('Error in editor update:', error)
+        }
+      },
+      editorProps: {
+        attributes: {
+          class: 'prose prose-slate max-w-none min-h-[300px]'
         },
-        transformParseRules: [
-          {
-            find: /^---\n([\s\S]*?)\n---\n/,
-            handler: ({ content, match }) => {
-              return content.slice(match[0].length)
-            }
+        handlePaste: (view, event) => {
+          const text = event.clipboardData?.getData('text/plain')
+          if (!text) return false
+
+          // Handle pasted URLs
+          if (text.match(/^https?:\/\/\S+$/)) {
+            const url = text
+            const title = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]
+            view.dispatch(
+              view.state.tr.insertText(`[${title}](${url})`)
+            )
+            return true
           }
-        ]
-      })
-    ],
-    onSelectionUpdate: updateToolbarPosition,
-    content: props.modelValue,
-    onUpdate: ({ editor }) => {
-      try {
-        let markdown = editor.storage.markdown.getMarkdown()
-        
-        markdown = markdown.replace(/\\(\[|\]|\(|\))/g, '$1')
-        
-        const originalFrontmatter = parseFrontmatter(props.modelValue).frontmatter
-        if (originalFrontmatter) {
-          markdown = `---\n${yaml.dump(originalFrontmatter)}---\n\n${markdown}`
-        }
-        
-        emit('update:modelValue', markdown)
-      } catch (error) {
-        console.error('Error in editor update:', error)
-      }
-    },
-    editorProps: {
-      attributes: {
-        class: 'prose prose-slate max-w-none min-h-[300px]'
-      },
-      handlePaste: (view, event) => {
-        const text = event.clipboardData?.getData('text/plain')
-        if (!text) return false
 
-        // Handle pasted URLs
-        if (text.match(/^https?:\/\/\S+$/)) {
-          const url = text
-          const title = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]
-          view.dispatch(
-            view.state.tr.insertText(`[${title}](${url})`)
-          )
-          return true
-        }
-
-        // Handle pasted markdown links
-        if (/^\[.*\]\(.*\)$/.test(text.trim())) {
-          view.dispatch(view.state.tr.insertText(text))
-          return true
-        }
-
-        // Extract image URL from clipboard
-        const imageUrl = extractImageUrl(event);
-        
-        if (imageUrl) {
-          // Generate local filename
-          const filename = generateUniqueFilename(imageUrl);
-          
-          // Save image to assets/images/
-          const localPath = `assets/images/${filename}`;
-          
-          // Use relative path in markdown
-          const markdownImage = `![](/${localPath})`;
-          
-          // Insert at cursor position
-          view.dispatch(
-            view.state.tr.insertText(markdownImage)
-          );
-          
-          event.preventDefault();
-        }
-
-        return false
-      },
-      handleDOMEvents: {
-        dblclick: (view, event) => {
-          const target = event.target as HTMLElement
-          if (target.tagName === 'IMG') {
-            const node = view.state.doc.nodeAt(view.posAtDOM(target, 0))
-            if (node) {
-              selectedImage.value = {
-                alt: node.attrs.alt || '',
-                url: node.attrs.src || '',
-                node
-              }
-              showImageEditDialog.value = true
-              return true
-            }
+          // Handle pasted markdown links
+          if (/^\[.*\]\(.*\)$/.test(text.trim())) {
+            view.dispatch(view.state.tr.insertText(text))
+            return true
           }
+
+          // Extract image URL from clipboard
+          const imageUrl = extractImageUrl(event);
+          
+          if (imageUrl) {
+            // Generate local filename
+            const filename = generateUniqueFilename(imageUrl);
+            
+            // Save image to assets/images/
+            const localPath = `assets/images/${filename}`;
+            
+            // Use relative path in markdown
+            const markdownImage = `![](/${localPath})`;
+            
+            // Insert at cursor position
+            view.dispatch(
+              view.state.tr.insertText(markdownImage)
+            );
+            
+            event.preventDefault();
+          }
+
           return false
+        },
+        handleDOMEvents: {
+          dblclick: (view, event) => {
+            const target = event.target as HTMLElement
+            if (target.tagName === 'IMG') {
+              const node = view.state.doc.nodeAt(view.posAtDOM(target, 0))
+              if (node) {
+                selectedImage.value = {
+                  alt: node.attrs.alt || '',
+                  url: node.attrs.src || '',
+                  node
+                }
+                showImageEditDialog.value = true
+                return true
+              }
+            }
+            return false
+          }
         }
       }
-    }
+    })
+    editor.value = newEditor
   })
-  editor.value = newEditor
 })
 
 // Watch for external content changes

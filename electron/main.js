@@ -82,9 +82,17 @@ function createWindow() {
       contextIsolation: false,
       enableRemoteModule: true,
       webSecurity: true,
-      allowRunningInsecureContent: false
+      allowRunningInsecureContent: false,
+      backgroundThrottling: false,
+      spellcheck: false
     },
+    show: false,
     backgroundColor: '#ffffff'
+  })
+
+  // Show window when ready to reduce flicker
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
   })
 
   // In development, load from local server

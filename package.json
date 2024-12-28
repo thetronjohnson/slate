@@ -48,10 +48,14 @@
   "build": {
     "appId": "com.yourdomain.slate-editor",
     "productName": "Slate",
+    "asar": true,
+    "compression": "maximum",
     "mac": {
       "category": "public.app-category.productivity",
       "darkModeSupport": true,
       "icon": "electron/icons/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
       "target": [
         {
           "target": "dmg",

@@ -4,11 +4,17 @@ import path from 'path'
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss', 'nuxt-icon'],
+  experimental: {
+    payloadExtraction: false,
+    renderJsonPayloads: false,
+    asyncContext: true
+  },
   tailwindcss: {
     config: {
       content: [],
+      safelist: [],
       theme: {
         extend: {
           fontFamily: {
@@ -46,7 +52,13 @@ export default defineNuxtConfig({
       dir: path.join(__dirname, 'dist'),
       publicDir: path.join(__dirname, 'dist')
     },
-    preset: 'static'
+    preset: 'static',
+    minify: true,
+    compressPublicAssets: true,
+    prerender: {
+      crawlLinks: false,
+      routes: ['/']
+    }
   },
   vite: {
     assetsInclude: ['**/*.ttf', '**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg'],
