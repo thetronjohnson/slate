@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 
 export default defineNuxtConfig({
-  compatibilityDate: '2024-11-01',
+  ssr: false,
   devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss', 'nuxt-icon'],
   experimental: {
@@ -26,41 +26,43 @@ export default defineNuxtConfig({
       plugins: [require('@tailwindcss/typography')],
     }
   },
-  ssr: false,
   app: {
-    baseURL: process.env.NODE_ENV === 'production' ? './' : '/',
-    buildAssetsDir: 'assets',
-    head: {
-      link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
-        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
-        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' },
-        { rel: 'manifest', href: '/site.webmanifest' }
-      ],
-      meta: [
-        { name: 'msapplication-TileColor', content: '#ffffff' },
-        { name: 'theme-color', content: '#ffffff' }
-      ]
-    }
+    baseURL: './',
+    buildAssetsDir: '_nuxt',
+    cdnURL: './',
   },
   nitro: {
+    preset: 'static',
     output: {
       dir: path.join(__dirname, 'dist'),
       publicDir: path.join(__dirname, 'dist')
     },
-    preset: 'static',
-    minify: true,
-    compressPublicAssets: true,
     prerender: {
-      crawlLinks: false,
+      crawlLinks: true,
       routes: ['/']
-    }
+    },
+    serveStatic: true,
+    minify: true
   },
   vite: {
-    assetsInclude: ['**/*.ttf']
+    base: './',
+    build: {
+      outDir: 'dist',
+      assetsDir: '_nuxt',
+      emptyOutDir: true,
+      rollupOptions: {
+        output: {
+          format: 'es',
+          entryFileNames: '_nuxt/[name].js',
+          chunkFileNames: '_nuxt/[name].js',
+          assetFileNames: '_nuxt/[name][extname]'
+        }
+      }
+    }
   },
-  css: [
-    '@/assets/styles/global.css'
-  ]
+  vue: {
+    compilerOptions: {
+      isCustomElement: (tag) => ['webview'].includes(tag)
+    }
+  }
 })

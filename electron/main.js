@@ -20,8 +20,23 @@ const store = new Store({
 // Declare mainWindow in the global scope
 let mainWindow = null
 
-// Register secure custom protocol
-app.whenReady().then(() => {
+// Register protocol as secure and bypassing CSP BEFORE app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'workspace',
+    privileges: {
+      standard: true,
+      supportFetchAPI: true,
+      secure: true,
+      bypassCSP: true,
+      corsEnabled: true,
+      stream: true
+    }
+  }
+])
+
+// Register secure custom protocol after app is ready
+function registerProtocol() {
   protocol.registerFileProtocol('workspace', (request, callback) => {
     try {
       const workspace = store.get('workspace')
@@ -55,22 +70,7 @@ app.whenReady().then(() => {
       callback({ error: -2 })
     }
   })
-
-  // Register protocol as secure and bypassing CSP
-  protocol.registerSchemesAsPrivileged([
-    {
-      scheme: 'workspace',
-      privileges: {
-        standard: true,
-        supportFetchAPI: true,
-        secure: true,
-        bypassCSP: true,
-        corsEnabled: true,
-        stream: true
-      }
-    }
-  ])
-})
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -84,7 +84,8 @@ function createWindow() {
       webSecurity: true,
       allowRunningInsecureContent: false,
       backgroundThrottling: false,
-      spellcheck: false
+      spellcheck: false,
+      webviewTag: true
     },
     show: false,
     backgroundColor: '#ffffff'
@@ -101,7 +102,51 @@ function createWindow() {
     mainWindow.webContents.openDevTools()
   } else {
     // In production, load the built files
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    const indexPath = path.join(__dirname, '../dist/index.html')
+    console.log('Loading production file from:', indexPath)
+    
+    // Add protocol for serving local files
+    protocol.registerFileProtocol('file', (request, callback) => {
+      try {
+        const filePath = request.url.replace('file:///', '')
+        const decodedPath = decodeURIComponent(filePath)
+        console.log('Requested file:', decodedPath)
+        callback({ path: decodedPath })
+      } catch (error) {
+        console.error('Error handling file protocol:', error)
+        callback({ error: -2 })
+      }
+    })
+
+    // Load the index.html file
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error('Failed to load index.html:', err)
+    })
+
+    // Add error handler for resource loading
+    mainWindow.webContents.session.webRequest.onBeforeRequest({ urls: ['file://*'] }, (details, callback) => {
+      const url = new URL(details.url)
+      console.log('Resource request:', {
+        url: details.url,
+        path: url.pathname
+      })
+      callback({})
+    })
+
+    // Debug loading issues
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('Failed to load:', {
+        errorCode,
+        errorDescription,
+        validatedURL
+      })
+    })
+
+    mainWindow.webContents.on('dom-ready', () => {
+      console.log('DOM is ready')
+    })
+
+    mainWindow.webContents.openDevTools()
   }
 
   // Handle window close
@@ -113,7 +158,9 @@ function createWindow() {
   return mainWindow
 }
 
+// Initialize app
 app.whenReady().then(() => {
+  registerProtocol()
   createWindow()
 
   app.on('activate', () => {
