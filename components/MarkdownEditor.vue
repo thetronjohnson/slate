@@ -221,13 +221,15 @@ onMounted(() => {
   nextTick(() => {
     const newEditor = new Editor({
       // Add performance options
-      enableInputRules: false,
-      enablePasteRules: false,
+      enableInputRules: true,
+      enablePasteRules: true,
       extensions: [
         StarterKit.configure({
           heading: {
             levels: [1, 2, 3, 4, 5, 6]
           },
+          // Enable markdown parsing
+          markdown: true
         }),
         Link.configure({
           openOnClick: false,
@@ -300,15 +302,15 @@ onMounted(() => {
           tightLists: true,
           tightListClass: 'tight',
           bulletListMarker: '-',
-          linkify: false,
-          breaks: false,
+          linkify: true,
+          breaks: true,
           transformPastedText: true,
           transformCopiedText: true,
           linkValidator: url => /^https?:\/\//.test(url),
           transformPaste: true,
           preserveCursor: true,
           keepMarks: true,
-          hardBreak: false,
+          hardBreak: true,
           transformSerialize: (markdown) => {
             const { frontmatter, markdown: content } = parseFrontmatter(markdown)
             if (frontmatter) {
@@ -412,27 +414,39 @@ onMounted(() => {
       }
     })
     editor.value = newEditor
+
+    // Initialize with content if available
+    if (props.modelValue) {
+      const { markdown } = parseFrontmatter(props.modelValue)
+      editor.value.commands.setContent(markdown)
+    }
   })
 })
 
 // Watch for external content changes
 watch(() => props.modelValue, (newContent) => {
-  if (editor.value && editor.value.storage.markdown.getMarkdown() !== newContent) {
+  if (!editor.value) return
+  
+  const currentContent = editor.value.storage.markdown.getMarkdown()
+  if (currentContent !== newContent) {
     try {
-      const selection = editor.value.state.selection
-      const { from, to } = selection
-      
       const { markdown } = parseFrontmatter(newContent)
-      editor.value.commands.setContent(markdown)
       
-      if (from !== undefined && to !== undefined && from <= editor.value.state.doc.content.size) {
-        nextTick(() => {
+      // Preserve selection
+      const { from, to } = editor.value.state.selection
+      
+      // Set content and restore selection
+      editor.value.commands.setContent(markdown, false)
+      
+      nextTick(() => {
+        if (from !== undefined && to !== undefined) {
+          const docSize = editor.value?.state.doc.content.size || 0
           editor.value?.commands.setTextSelection({
-            from: Math.min(from, editor.value.state.doc.content.size),
-            to: Math.min(to, editor.value.state.doc.content.size)
+            from: Math.min(from, docSize),
+            to: Math.min(to, docSize)
           })
-        })
-      }
+        }
+      })
     } catch (error) {
       console.error('Error updating editor content:', error)
     }

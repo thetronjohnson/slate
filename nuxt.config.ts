@@ -64,5 +64,8 @@ export default defineNuxtConfig({
     compilerOptions: {
       isCustomElement: (tag) => ['webview'].includes(tag)
     }
+  },
+  build: {
+    transpile: ['@tiptap/vue-3', '@tiptap/core', '@tiptap/starter-kit', '@tiptap/extension-link']
   }
 })

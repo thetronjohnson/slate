@@ -145,8 +145,6 @@ function createWindow() {
     mainWindow.webContents.on('dom-ready', () => {
       console.log('DOM is ready')
     })
-
-    mainWindow.webContents.openDevTools()
   }
 
   // Handle window close
