@@ -2,6 +2,8 @@
 
 A modern, minimal Markdown editor built with Electron and Vue.js. Features workspace-based file management, image support, and real-time preview.
 
+<img width="1312" alt="Screenshot 2025-01-09 at 7 28 53 PM" src="https://github.com/user-attachments/assets/32ce8f44-04e1-49a0-a0cb-5e56855311be" />
+
 ## Features
 
 - 📝 Full Markdown support
