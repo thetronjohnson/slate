@@ -336,6 +336,7 @@ import Modal from '../components/Modal.vue';
 import TurndownService from 'turndown';
 import { useStorage } from '../composables/useStorage';
 import { useRouter } from 'vue-router';
+import { useEventListener } from '@vueuse/core';
 
 // Local Storage Keys
 const SETTINGS = {
@@ -410,6 +411,19 @@ const showCopiedMessage = ref(false);
 
 const { storage, initStorage } = useStorage();
 
+// Prevent default select all in the page
+function handleSelectAll(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+    // Only prevent default if we're not in an input or textarea
+    if (
+      e.target.tagName !== 'INPUT' && 
+      e.target.tagName !== 'TEXTAREA'
+    ) {
+      e.preventDefault();
+    }
+  }
+}
+
 onMounted(async () => {
   await initStorage();
   try {
@@ -462,6 +476,9 @@ onMounted(async () => {
       showUserMenu.value = false;
     }
   });
+
+  // Add global listener to prevent default select all
+  useEventListener(document, 'keydown', handleSelectAll);
 });
 
 function selectFile(file) {

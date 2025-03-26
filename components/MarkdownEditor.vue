@@ -79,6 +79,7 @@ import { Icon } from '@iconify/vue';
 import CommandPalette from './CommandPalette.vue';
 import { useStorage } from '../composables/useStorage';
 import FloatingToolbar from './FloatingToolbar.vue';
+import { useEventListener } from '@vueuse/core';
 
 const props = defineProps({
   modelValue: {
@@ -292,6 +293,9 @@ onMounted(async () => {
       saveContent();
     }
   });
+
+  // Add keyboard shortcut listener
+  useEventListener(document, 'keydown', selectAllContent);
 });
 
 onBeforeUnmount(() => {
@@ -376,6 +380,16 @@ async function saveContent() {
 }
 
 const { storage } = useStorage();
+
+// Add method to select all editor content
+function selectAllContent(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+    e.preventDefault(); // Prevent default browser select all
+    if (editor.value) {
+      editor.value.commands.selectAll();
+    }
+  }
+}
 </script>
 
 <style>
@@ -383,7 +397,7 @@ const { storage } = useStorage();
   min-height: calc(100vh - 48px); /* 48px is the height of the top bar */
   outline: none;
   padding: 0;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
@@ -398,37 +412,36 @@ const { storage } = useStorage();
 .ProseMirror h1 {
   @apply text-3xl font-bold mb-4 text-gray-900 pb-1;
   letter-spacing: -0.01em;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
 }
 
 .ProseMirror h2 {
   @apply text-2xl font-bold mb-3 text-gray-800 mt-6;
   letter-spacing: -0.01em;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
 }
 
 .ProseMirror h3 {
   @apply text-xl font-bold mb-2 text-gray-800 mt-5;
   letter-spacing: -0.01em;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
 }
 
 .ProseMirror p {
   @apply mb-4 leading-relaxed text-gray-700;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
   font-size: 1.05rem;
   line-height: 1.7;
-  font-weight: 400;
 }
 
 .ProseMirror ul {
   @apply list-disc pl-5 mb-4 text-gray-700 space-y-1;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
 }
 
 .ProseMirror ol {
   @apply list-decimal pl-5 mb-4 text-gray-700 space-y-1;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
 }
 
 /* Fix list item alignment */
@@ -455,7 +468,7 @@ const { storage } = useStorage();
 
 .ProseMirror ul[data-type="taskList"] li {
   @apply flex items-center gap-2;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label {
@@ -477,7 +490,7 @@ const { storage } = useStorage();
 
 .ProseMirror blockquote {
   @apply border-l-4 border-amber-200 pl-4 my-4 py-2 bg-amber-50/50 text-amber-800 rounded-r;
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  @apply font-editor;
 }
 
 .ProseMirror blockquote p {

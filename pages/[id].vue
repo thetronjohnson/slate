@@ -4,7 +4,7 @@
     <header class="bg-white border-b border-slate-200">
       <div class="max-w-3xl mx-auto px-4 sm:px-6">
         <div class="flex justify-between items-center h-16">
-          <h1 class="text-xl font-semibold text-slate-900">{{ page?.name || 'Page not found' }}</h1>
+          <h1 class="text-xl font-semibold text-slate-900 font-sans">{{ page?.name || 'Page not found' }}</h1>
         </div>
       </div>
     </header>
@@ -17,23 +17,23 @@
 
       <div v-else-if="!page" class="text-center py-12">
         <Icon icon="lucide:file-question" class="w-12 h-12 text-slate-300 mx-auto mb-4" />
-        <h3 class="text-sm font-medium text-slate-900">Page not found</h3>
-        <p class="mt-1 text-sm text-slate-500">
+        <h3 class="text-sm font-medium text-slate-900 font-sans">Page not found</h3>
+        <p class="mt-1 text-sm text-slate-500 font-sans">
           The page you're looking for doesn't exist or has been removed
         </p>
       </div>
 
-      <div v-else class="prose prose-slate max-w-none" v-html="page.content"></div>
+      <div v-else class="prose prose-slate max-w-none font-editor" v-html="page.content"></div>
     </main>
 
     <!-- Remove the existing footer and replace with floating button -->
     <div class="fixed bottom-4 right-4 z-50">
       <a
         href="https://useslate.com"
-        class="flex items-center space-x-1 bg-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200 border border-slate-200"
+        class="flex items-center space-x-1 bg-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200 border border-slate-200 font-sans"
       >
-        <span class="text-sm text-slate-700">Published with</span>
-        <span class="text-sm font-medium text-slate-900">Slate</span>
+        <span class="text-sm text-slate-700 font-sans">Published with</span>
+        <span class="text-sm font-medium text-slate-900 font-sans">Slate</span>
       </a>
     </div>
   </div>
@@ -69,6 +69,31 @@ async function fetchPage() {
 </script>
 
 <style>
+.prose {
+  @apply font-editor;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  @apply font-editor;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote {
+  @apply font-editor;
+}
+
+.prose pre,
+.prose code {
+  @apply font-mono;
+}
+
 .prose {
   font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   max-width: 100%;
