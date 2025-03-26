@@ -10,8 +10,28 @@
     <div v-if="isOpen" class="fixed inset-x-0 bottom-0 z-50">
       <div class="mx-auto max-w-2xl w-full px-4 pb-4">
         <div class="bg-white rounded-lg shadow-xl border border-slate-200/50 overflow-hidden">
-          <!-- Selection Preview -->
-          <div v-if="props.selectedContent !== props.fullContent" class="px-4 py-2 border-b border-slate-100 bg-slate-50/50">
+          <!-- Login Prompt for Unauthenticated Users -->
+          <div v-if="!user" class="p-4">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                <Icon icon="lucide:sparkles" class="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <h3 class="font-medium text-slate-900">Login to use Slate AI</h3>
+                <p class="text-sm text-slate-500">Get instant help with your writing</p>
+              </div>
+            </div>
+            <button
+              @click="handleLogin"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all duration-200 active:scale-95"
+            >
+              <Icon icon="lucide:log-in" class="w-4 h-4" />
+              Sign in to continue
+            </button>
+          </div>
+
+          <!-- Selection Preview (Only show when authenticated) -->
+          <div v-if="user && props.selectedContent !== props.fullContent" class="px-4 py-2 border-b border-slate-100 bg-slate-50/50">
             <div class="flex items-center gap-2">
               <Icon icon="lucide:text-select" class="w-3.5 h-3.5 text-slate-400" />
               <p class="text-xs text-slate-500 truncate">
@@ -20,7 +40,8 @@
             </div>
           </div>
 
-          <div class="relative">
+          <!-- Input and Prompts (Only show when authenticated) -->
+          <div v-if="user" class="relative">
             <input
               v-model="prompt"
               type="text"
@@ -37,8 +58,8 @@
             </div>
           </div>
           
-          <!-- Helper Prompts -->
-          <div class="px-4 py-3 bg-slate-50 border-t border-slate-100">
+          <!-- Helper Prompts (Only show when authenticated) -->
+          <div v-if="user" class="px-4 py-3 bg-slate-50 border-t border-slate-100">
             <div class="flex flex-col gap-2">
               <p class="text-xs font-medium text-slate-500">Quick prompts:</p>
               <div class="flex flex-wrap gap-2">
@@ -87,6 +108,8 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue';
 import { Icon } from '@iconify/vue';
+import { useRouter } from 'vue-router';
+import { useSupabaseUser } from '#imports';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -101,6 +124,8 @@ const error = ref('');
 const isLoading = ref(false);
 const inputRef = ref(null);
 let savedSelection = null;
+const user = useSupabaseUser();
+const router = useRouter();
 
 const selectedTextPrompts = [
   'Fix grammar',
@@ -151,12 +176,16 @@ watch(() => props.isOpen, async (isOpen) => {
   if (isOpen) {
     prompt.value = '';
     error.value = '';
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      savedSelection = selection.getRangeAt(0);
+    if (user.value) {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        savedSelection = selection.getRangeAt(0);
+      }
     }
     await nextTick();
-    inputRef.value?.focus();
+    if (user.value) {
+      inputRef.value?.focus();
+    }
   }
 });
 
@@ -166,12 +195,6 @@ async function handleSubmit() {
   try {
     isLoading.value = true;
     error.value = '';
-    
-    if (savedSelection) {
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(savedSelection);
-    }
     
     const response = await fetch('/api/ai', {
       method: 'POST',
@@ -184,9 +207,22 @@ async function handleSubmit() {
       }),
     });
     
-    if (!response.ok) throw new Error('Failed to get AI response');
+    if (!response.ok) {
+      throw new Error('Failed to get AI response');
+    }
     
     const data = await response.json();
+    
+    // Check if authentication is required
+    if (!data.success && data.requiresAuth) {
+      return;
+    }
+    
+    // If there's no content, it means there was an error
+    if (!data.content) {
+      throw new Error(data.message || 'Failed to get AI response');
+    }
+    
     emit('update-content', data.content);
     close();
   } catch (e) {
@@ -203,5 +239,18 @@ function close() {
     selection.addRange(savedSelection);
   }
   emit('close');
+}
+
+function executeCommand(command) {
+  if (!user.value) {
+    return;
+  }
+  command.action();
+  emit('close');
+}
+
+async function handleLogin() {
+  emit('close');
+  await router.push('/login');
 }
 </script> 

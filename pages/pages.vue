@@ -10,7 +10,14 @@
         Are you sure you want to delete "{{ pageToDelete?.name }}"? This action cannot be undone.
       </p>
       <template #actions>
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-3">
+          <button
+            type="button"
+            @click="showDeleteModal = false"
+            class="inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-all duration-200 active:scale-95"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             :disabled="isDeleting"

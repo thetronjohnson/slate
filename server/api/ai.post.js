@@ -1,3 +1,5 @@
+import { serverSupabaseServiceRole } from '#supabase/server';
+import { serverSupabaseUser } from '#supabase/server';
 import OpenAI from 'openai';
 import { useRuntimeConfig } from '#imports';
 
@@ -142,6 +144,16 @@ function getSystemPrompt(prompt) {
 }
 
 export default defineEventHandler(async (event) => {
+  // Check if user is authenticated
+  const user = await serverSupabaseUser(event);
+  if (!user) {
+    return {
+      success: false,
+      requiresAuth: true,
+      message: 'Authentication required to use AI features'
+    };
+  }
+
   const config = useRuntimeConfig();
   
   // Debug log to see what's available

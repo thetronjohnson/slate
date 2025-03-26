@@ -47,6 +47,13 @@
       <template #actions>
         <button
           type="button"
+          class="inline-flex justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all duration-200 active:scale-95"
+          @click="showExportModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
           class="inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all duration-200 active:scale-95"
           @click="showExportModal = false"
         >
@@ -58,10 +65,11 @@
     <!-- Share Modal -->
     <Modal
       :is-open="showShareModal"
-      title="Publish Page"
+      :title="user ? 'Publish Page' : 'Share Your Work'"
       @close="showShareModal = false"
     >
       <div class="space-y-4">
+        <!-- Published State -->
         <div v-if="publishedPageId" class="flex items-center gap-3 p-4 rounded-md border border-slate-200 bg-slate-50">
           <div class="flex-1 min-w-0 space-y-2">
             <div class="flex items-center gap-2">
@@ -95,18 +103,36 @@
           </div>
         </div>
         
+        <!-- Not Logged In State -->
+        <div v-else-if="!user" class="space-y-6">
+          <div class="space-y-4">
+            <div class="flex items-center gap-3 p-4 rounded-md border border-slate-200 bg-slate-50">
+              <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+                <Icon icon="lucide:globe" class="w-6 h-6 text-blue-500" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-medium text-slate-900 mb-1">Share with anyone</h3>
+                <p class="text-sm text-slate-500">Get a public link to share your document</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <button
+              @click="handleLogin"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all duration-200 text-sm font-medium active:scale-95"
+            >
+              <Icon icon="lucide:log-in" class="w-4 h-4" />
+              Sign up to publish
+            </button>
+          </div>
+        </div>
+        
+        <!-- Logged In, Not Published State -->
         <div v-else class="space-y-3">
           <p class="text-sm font-medium text-slate-700">Make your document public</p>
           <p class="text-xs text-slate-500">Once published, anyone with the page link can view this document.</p>
-          <button
-            v-if="!user"
-            @click="handleLogin"
-            class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all duration-200 text-sm"
-          >
-            <Icon icon="lucide:log-in" class="w-4 h-4" />
-            Sign in to publish
-          </button>
-          <div v-else class="space-y-4">
+          <div class="space-y-4">
             <div class="space-y-2">
               <label class="block text-sm font-medium text-slate-700">Page Name</label>
               <input
@@ -119,10 +145,19 @@
           </div>
         </div>
       </div>
+      
       <template #actions>
         <div class="flex justify-end gap-3">
           <button
-            v-if="!publishedPageId"
+            v-if="user && !publishedPageId"
+            type="button"
+            @click="showShareModal = false"
+            class="inline-flex justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all duration-200 active:scale-95"
+          >
+            Cancel
+          </button>
+          <button
+            v-if="user && !publishedPageId"
             type="button"
             @click="publishPage"
             :disabled="isPublishing || !publishPageName"
@@ -131,7 +166,7 @@
             {{ isPublishing ? 'Publishing...' : 'Publish' }}
           </button>
           <button
-            v-else
+            v-else-if="publishedPageId"
             type="button"
             class="inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all duration-200 active:scale-95"
             @click="showShareModal = false"
@@ -183,14 +218,14 @@
           <button 
             @click="showShareModal = true"
             class="p-1.5 rounded-md hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all duration-150 active:scale-95"
-            title="Publish document"
+            title="Publish page"
           >
             <Icon icon="lucide:upload-cloud" class="w-4 h-4" />
           </button>
           <button 
             @click="showExportModal = true"
             class="p-1.5 rounded-md hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all duration-150 active:scale-95"
-            title="Export document"
+            title="Export page"
           >
             <Icon icon="lucide:download" class="w-4 h-4" />
           </button>
@@ -200,6 +235,7 @@
             <button 
               @click="showUserMenu = !showUserMenu"
               class="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden border-2 border-slate-200 hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500"
+              title="User menu"
             >
               <img 
                 :src="user.user_metadata?.avatar_url" 

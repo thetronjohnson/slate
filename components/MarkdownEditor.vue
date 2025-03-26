@@ -482,7 +482,7 @@ const { storage } = useStorage();
 
 .ProseMirror blockquote p {
   @apply tracking-tight text-amber-800/90 m-0 leading-relaxed;
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 .ProseMirror pre {
