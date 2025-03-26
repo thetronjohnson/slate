@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles */
+body {
+  @apply antialiased text-gray-800 bg-white;
+  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6, p, li, blockquote, a, span, div {
+  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-semibold tracking-tight;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Custom scrollbar - Notion style */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-200 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-300;
+}
+
+/* Button styles */
+.btn {
+  @apply px-4 py-2 rounded-md transition-colors duration-200 focus:outline-none;
+}
+
+.btn-primary {
+  @apply bg-gray-900 text-white hover:bg-black;
+}
+
+.btn-secondary {
+  @apply bg-gray-50 text-gray-800 hover:bg-gray-100 border border-gray-200;
+}
+
+.btn-danger {
+  @apply bg-red-50 text-red-600 hover:bg-red-100 border border-red-200;
+}
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  @apply w-full;
+}
+
+.ProseMirror:focus {
+  @apply outline-none;
+}
+
+.ProseMirror h1 {
+  @apply text-3xl font-bold mb-4;
+}
+
+.ProseMirror h2 {
+  @apply text-2xl font-bold mb-3;
+}
+
+.ProseMirror h3 {
+  @apply text-xl font-bold mb-2;
+}
+
+.ProseMirror p {
+  @apply mb-4;
+}
+
+.ProseMirror ul {
+  @apply list-disc pl-5 mb-4;
+}
+
+.ProseMirror ol {
+  @apply list-decimal pl-5 mb-4;
+}
+
+.ProseMirror blockquote {
+  @apply border-l-4 border-gray-300 pl-4 italic my-4;
+}
+
+.ProseMirror pre {
+  @apply bg-gray-100 p-4 rounded my-4 overflow-x-auto;
+}
+
+.ProseMirror code {
+  @apply bg-gray-100 px-1 py-0.5 rounded text-sm;
+}
+
+.ProseMirror img {
+  @apply max-w-full h-auto my-4;
+}
+
+/* Slash command menu styles */
+.slash-command-menu {
+  @apply z-50 bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden;
+}
+
+.slash-command-item {
+  @apply hover:bg-gray-100 w-full text-left px-3 py-2 flex items-center gap-2 text-sm;
+}
+
+.slash-command-item:hover {
+  @apply bg-gray-100 text-gray-900;
+}
+
+/* Tooltip styles */
+.tooltip {
+  @apply invisible absolute;
+}
+
+.has-tooltip:hover .tooltip {
+  @apply visible z-50;
+}
+
+/* Notion-style selection */
+::selection {
+  @apply bg-blue-100;
+} 
