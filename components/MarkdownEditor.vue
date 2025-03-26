@@ -1,5 +1,17 @@
 <template>
   <div class="markdown-editor h-full">
+    <CommandPalette
+      :is-open="showCommandPalette"
+      :selected-content="getSelectedText()"
+      @close="showCommandPalette = false"
+      @update-content="updateSelectedText"
+    />
+    
+    <SelectionWarningModal
+      :is-open="showSelectionWarning"
+      @close="showSelectionWarning = false"
+    />
+    
     <!-- Editor Content -->
     <div class="bg-white h-full">
       <editor-content 
@@ -30,6 +42,8 @@ import Link from '@tiptap/extension-link';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { Icon } from '@iconify/vue';
+import CommandPalette from './CommandPalette.vue';
+import SelectionWarningModal from './SelectionWarningModal.vue';
 
 const props = defineProps({
   modelValue: {
@@ -219,6 +233,67 @@ defineExpose({
   formatMenuItems,
   listMenuItems,
   insertMenuItems
+});
+
+const showCommandPalette = ref(false);
+const showSelectionWarning = ref(false);
+
+// Setup keyboard shortcut
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown);
+});
+
+function handleKeydown(e) {
+  // Open command palette on Cmd/Ctrl + K
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    showCommandPalette.value = true;
+  }
+}
+
+function updateContent(newContent) {
+  if (editor.value) {
+    editor.value.commands.setContent(newContent);
+  }
+}
+
+function getSelectedText() {
+  if (!editor.value) return null;
+  const { from, to } = editor.value.state.selection;
+  if (from === to) return null;
+  return editor.value.state.doc.textBetween(from, to);
+}
+
+function updateSelectedText(newContent) {
+  if (!editor.value) return;
+  const { from, to } = editor.value.state.selection;
+  editor.value.chain()
+    .focus()
+    .deleteRange({ from, to })
+    .insertContent(newContent)
+    .run();
+}
+
+function handleCommandPalette() {
+  const selectedText = getSelectedText();
+  if (!selectedText) {
+    showSelectionWarning.value = true;
+    return;
+  }
+  showCommandPalette.value = true;
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      handleCommandPalette();
+    }
+  });
 });
 </script>
 

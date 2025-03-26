@@ -2,6 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
+  ssr: true,
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxtjs/google-fonts'
@@ -16,5 +17,11 @@ export default defineNuxtConfig({
     preconnect: true,
     preload: true,
   },
-  css: ['~/assets/css/main.css']
+  css: ['~/assets/css/main.css'],
+  runtimeConfig: {
+    openaiApiKey: process.env.OPENAI_API_KEY,
+    public: {
+      // Public variables go here
+    }
+  }
 })

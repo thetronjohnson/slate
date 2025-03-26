@@ -77,12 +77,12 @@
         <div class="flex items-center">
           <h1 class="text-sm font-medium text-gray-800">{{ activeFile?.name || 'Untitled' }}</h1>
           <span class="ml-3 text-xs text-gray-400" v-if="activeFile">
-            Last edited: {{ formatDate(activeFile.updatedAt) }}
+            Last updated {{ formatDate(activeFile.updatedAt) }}
           </span>
         </div>
         
         <!-- Formatting Menu -->
-        <div class="flex items-center gap-3" v-if="editorRef && editorRef.editor">
+        <div class="flex-1 flex items-center justify-center gap-3" v-if="editorRef && editorRef.editor">
           <!-- Format Menu Items -->
           <div class="flex items-center gap-1 px-2 py-1 bg-white rounded-md border border-gray-200/75 shadow-sm">
             <button 
@@ -124,13 +124,24 @@
               <Icon :icon="item.icon" class="w-4 h-4" />
             </button>
           </div>
-          
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="text-xs text-gray-500 flex items-center gap-1.5">
+            <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">
+              {{ isMac ? '⌘' : 'Ctrl' }}
+            </kbd>
+            <span>+</span>
+            <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">K</kbd>
+            <span class="ml-1">for Slate AI</span>
+          </div>
+          <div class="h-4 w-px bg-gray-200 mx-2"></div>
           <button 
-            @click="showExportModal = true" 
-            class="text-sm flex items-center gap-2 px-4 py-2 text-slate-700 bg-white hover:bg-slate-50 rounded-md transition-all duration-200 border border-slate-200/60 shadow-sm hover:shadow active:scale-95"
+            @click="showExportModal = true"
+            class="p-1.5 rounded-md hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all duration-150 active:scale-95"
+            title="Export document"
           >
             <Icon icon="lucide:download" class="w-4 h-4" />
-            Export
           </button>
         </div>
       </div>
@@ -162,7 +173,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, nextTick, computed } from 'vue';
 import { Icon } from '@iconify/vue';
 import Modal from '../components/Modal.vue';
 import TurndownService from 'turndown';
@@ -189,6 +200,10 @@ const turndownService = new TurndownService({
   emDelimiter: '*',
   bulletListMarker: '-',
   strongDelimiter: '**'
+});
+
+const isMac = computed(() => {
+  return typeof navigator !== 'undefined' && /Mac/.test(navigator.platform);
 });
 
 onMounted(() => {
