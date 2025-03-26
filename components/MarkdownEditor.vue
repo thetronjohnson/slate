@@ -1,5 +1,12 @@
 <template>
   <div class="markdown-editor h-full">
+    <FloatingToolbar
+      v-if="editor"
+      :editor="editor"
+      :format-menu-items="formatMenuItems"
+      :list-menu-items="listMenuItems"
+      :insert-menu-items="insertMenuItems"
+    />
     <CommandPalette
       :is-open="showCommandPalette"
       :selected-content="getSelectedText()"
@@ -71,6 +78,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import { Icon } from '@iconify/vue';
 import CommandPalette from './CommandPalette.vue';
 import { useStorage } from '../composables/useStorage';
+import FloatingToolbar from './FloatingToolbar.vue';
 
 const props = defineProps({
   modelValue: {
@@ -227,24 +235,6 @@ const insertMenuItems = [
       if (editor.value) editor.value.chain().focus().toggleCodeBlock().run();
     },
     isActive: () => editor.value?.isActive('codeBlock')
-  },
-  {
-    name: 'Link',
-    icon: 'lucide:link',
-    action: () => {
-      const url = window.prompt('URL');
-      if (url && editor.value) {
-        editor.value.chain().focus().setLink({ href: url }).run();
-      }
-    },
-    isActive: () => editor.value?.isActive('link')
-  },
-  {
-    name: 'Horizontal Rule',
-    icon: 'lucide:minus',
-    action: () => {
-      if (editor.value) editor.value.chain().focus().setHorizontalRule().run();
-    }
   }
 ];
 

@@ -76,59 +76,14 @@
     <div class="flex flex-col flex-1 overflow-hidden">
       <!-- Top Bar -->
       <div class="flex items-center justify-between px-4 h-12 bg-white/80 backdrop-blur border-b border-slate-200/50 shadow-sm">
-        <div class="flex items-center">
+        <div class="flex items-center flex-1">
           <h1 class="text-sm font-medium text-gray-800">{{ activeFile?.name || 'Untitled' }}</h1>
           <span class="ml-3 text-xs text-gray-400" v-if="activeFile">
             Last updated {{ formatDate(activeFile.updatedAt) }}
           </span>
         </div>
-        
-        <!-- Formatting Menu -->
-        <div class="flex-1 flex items-center justify-center gap-3" v-if="editorRef && editorRef.editor">
-          <!-- Format Menu Items -->
-          <div class="flex items-center gap-1 px-2 py-1 bg-white rounded-md border border-gray-200/75 shadow-sm">
-            <button 
-              v-for="item in editorRef.formatMenuItems" 
-              :key="item.name"
-              @click="item.action"
-              class="p-1.5 rounded-md hover:bg-gray-50 transition-all duration-150 active:scale-95"
-              :class="{ 'text-gray-900 bg-gray-100': editorRef.editor && item.isActive && item.isActive(), 'text-gray-500': !(editorRef.editor && item.isActive && item.isActive()) }"
-              :title="item.name"
-            >
-              <Icon :icon="item.icon" class="w-4 h-4" />
-            </button>
-            
-            <div class="h-5 w-px bg-gray-200/75 mx-1"></div>
-            
-            <!-- List Menu Items -->
-            <button 
-              v-for="item in editorRef.listMenuItems" 
-              :key="item.name"
-              @click="item.action"
-              class="p-1.5 rounded-md hover:bg-gray-50 transition-all duration-150 active:scale-95"
-              :class="{ 'text-gray-900 bg-gray-100': editorRef.editor && item.isActive && item.isActive(), 'text-gray-500': !(editorRef.editor && item.isActive && item.isActive()) }"
-              :title="item.name"
-            >
-              <Icon :icon="item.icon" class="w-4 h-4" />
-            </button>
-            
-            <div class="h-5 w-px bg-gray-200/75 mx-1"></div>
-            
-            <!-- Insert Menu Items -->
-            <button 
-              v-for="item in editorRef.insertMenuItems.slice(0, 5)" 
-              :key="item.name"
-              @click="item.action"
-              class="p-1.5 rounded-md hover:bg-gray-50 transition-all duration-150 active:scale-95"
-              :class="{ 'text-gray-900 bg-gray-100': editorRef.editor && item.isActive && item.isActive(), 'text-gray-500': !(editorRef.editor && item.isActive && item.isActive()) }"
-              :title="item.name"
-            >
-              <Icon :icon="item.icon" class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-4">
           <div class="text-xs text-gray-500 flex items-center gap-1.5">
             <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">
               {{ isMac ? '⌘' : 'Ctrl' }}
@@ -144,6 +99,14 @@
             title="Export document"
           >
             <Icon icon="lucide:download" class="w-4 h-4" />
+          </button>
+          <div class="h-4 w-px bg-gray-200"></div>
+          <button 
+            @click="handleLogin" 
+            class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800 transition-all duration-200 text-sm font-medium active:scale-95"
+          >
+            <Icon icon="lucide:log-in" class="w-4 h-4" />
+            <span>Login</span>
           </button>
         </div>
       </div>
@@ -207,6 +170,7 @@ import { Icon } from '@iconify/vue';
 import Modal from '../components/Modal.vue';
 import TurndownService from 'turndown';
 import { useStorage } from '../composables/useStorage';
+import { useRouter } from 'vue-router';
 
 // Local Storage Keys
 const SETTINGS = {
@@ -269,6 +233,7 @@ const isSidebarOpen = ref(true);
 const showExportModal = ref(false);
 const isExporting = ref(false);
 const editorContainer = ref(null);
+const router = useRouter();
 
 const { storage, initStorage } = useStorage();
 
@@ -505,6 +470,13 @@ function handleFileRename(file) {
     // Save the updated files list
     saveFiles();
   }
+}
+
+function handleLogin() {
+  // For now, just log to console
+  console.log('Login clicked');
+  // You can implement actual login logic here
+  // router.push('/login');
 }
 </script>
 

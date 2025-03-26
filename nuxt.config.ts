@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   ssr: true,
   modules: [
     '@nuxtjs/tailwindcss',
-    '@nuxtjs/google-fonts'  ],
+    '@nuxtjs/google-fonts'
+  ],
   googleFonts: {
     families: {
       'Nunito Sans': [300, 400, 500, 600, 700],
