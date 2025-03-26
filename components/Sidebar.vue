@@ -143,7 +143,7 @@
       
       <div v-if="files.length === 0" class="text-center text-gray-400 mt-8 p-4">
         <Icon icon="lucide:file-question" class="w-12 h-12 mx-auto mb-2 text-gray-200" />
-        <p v-if="!isCollapsed" class="text-sm">No files yet</p>
+        <p v-if="!isCollapsed" class="text-sm">No pages yet</p>
       </div>
     </div>
     

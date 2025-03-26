@@ -99,7 +99,7 @@ const editor = useEditor({
       }
     }),
     Placeholder.configure({
-      placeholder: 'Type "/" for commands, or just start writing...'
+      placeholder: 'Type "⌘ + K" for Slate AI, or just start writing...'
     }),
     Image,
     Link,

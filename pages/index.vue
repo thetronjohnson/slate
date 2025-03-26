@@ -157,16 +157,42 @@
             @update:modelValue="updateFileContent"
             :fileId="activeFile.id"
           />
-          <div v-else class="flex flex-col items-center justify-center h-64 mt-12 text-gray-400">
-            <Icon icon="lucide:file-text" class="w-16 h-16 mb-4 text-gray-200" />
-            <p class="text-lg">Select a file or create a new one to start editing</p>
-            <button 
-              @click="createFile('Untitled')" 
-              class="mt-4 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-black transition-all duration-200 flex items-center gap-2 hover:shadow-md active:scale-95"
-            >
-              <Icon icon="lucide:file-plus" class="w-4 h-4" />
-              Create New File
-            </button>
+          <div v-else class="flex flex-col items-center justify-center h-full mt-12 text-gray-400">
+            <div class="max-w-md text-center">
+              <Icon icon="lucide:book-open" class="w-20 h-20 mb-6 text-gray-200 mx-auto" />
+              <h2 class="text-xl font-semibold text-gray-600 mb-2">Welcome to Your SlateWorkspace</h2>
+              <p class="text-gray-500 mb-8">Create your first page or choose from our templates to get started quickly.</p>
+              
+              <div class="space-y-3">
+                <button 
+                  @click="createFile('Untitled')" 
+                  class="w-full px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-black transition-all duration-200 flex items-center justify-center gap-2 hover:shadow-md active:scale-98 group"
+                >
+                  <Icon icon="lucide:file-plus" class="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  New Blank Page
+                </button>
+                
+                <div class="flex gap-3">
+                  <button 
+                    v-for="template in templates" 
+                    :key="template.name"
+                    @click="createFile(template.name, template.content)" 
+                    class="flex-1 px-4 py-3 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 group"
+                  >
+                    <Icon :icon="template.icon" class="w-5 h-5 mb-2 text-gray-400 group-hover:text-gray-600 mx-auto" />
+                    <div class="text-sm font-medium text-gray-700">{{ template.name }}</div>
+                    <div class="text-xs text-gray-500">{{ template.description }}</div>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="mt-8 pt-8 border-t border-gray-100">
+                <p class="text-sm text-gray-400">
+                  Need help? Check out our 
+                  <a href="#" class="text-blue-600 hover:text-blue-700 hover:underline">quick start guide</a>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -208,6 +234,42 @@ const isMac = computed(() => {
   return typeof navigator !== 'undefined' && /Mac/.test(navigator.platform);
 });
 
+const templates = [
+  {
+    name: 'Meeting Notes',
+    icon: 'lucide:clipboard-list',
+    description: 'Structured template for meetings',
+    content: `<h1>Meeting Notes</h1>
+<p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+<h2>Agenda</h2>
+<ul>
+  <li>Topic 1</li>
+  <li>Topic 2</li>
+</ul>
+<h2>Action Items</h2>
+<ul>
+  <li>[ ] Task 1</li>
+  <li>[ ] Task 2</li>
+</ul>`
+  },
+  {
+    name: 'Project Plan',
+    icon: 'lucide:layout-template',
+    description: 'Project planning template',
+    content: `<h1>Project Overview</h1>
+<h2>Objectives</h2>
+<ul>
+  <li>Objective 1</li>
+  <li>Objective 2</li>
+</ul>
+<h2>Timeline</h2>
+<ul>
+  <li>Phase 1</li>
+  <li>Phase 2</li>
+</ul>`
+  }
+];
+
 onMounted(() => {
   loadFromLocalStorage();
 });
@@ -234,7 +296,7 @@ function loadFromLocalStorage() {
           <li>Your documents are automatically saved in your browser</li>
         </ul>
         <blockquote>
-          <p>Tip: You can collapse the sidebar using the button in the top-left corner</p>
+          <p>Pro Tip: Try "⌘ + K" to use Slate AI</p>
         </blockquote>
       `.trim());
     }

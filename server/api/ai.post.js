@@ -30,8 +30,16 @@ function formatTipTapHtml(text) {
       .replace(/~~(.*?)~~/g, '<s>$1</s>');
   };
 
+  // Clean up excessive line breaks and whitespace
+  text = text
+    .replace(/\n{3,}/g, '\n\n') // Replace 3+ consecutive line breaks with 2
+    .replace(/[ \t]+\n/g, '\n')  // Remove trailing whitespace
+    .trim();
+
   // Split into paragraphs
-  const paragraphs = text.split('\n\n').filter(p => p.trim());
+  const paragraphs = text.split('\n\n')
+    .map(p => p.trim())
+    .filter(Boolean);
   
   return paragraphs.map(p => {
     p = p.trim();
@@ -40,7 +48,10 @@ function formatTipTapHtml(text) {
     if (p.startsWith('```')) {
       const lines = p.split('\n');
       const language = lines[0].replace('```', '').trim();
-      const code = lines.slice(1, -1).join('\n');
+      const code = lines.slice(1, -1)
+        .map(line => line.trim())
+        .join('\n')
+        .trim();
       return `<pre><code class="language-${language}">${escapeHtml(code)}</code></pre>`;
     }
 
@@ -105,7 +116,7 @@ function formatTipTapHtml(text) {
     
     // Regular paragraphs
     return `<p>${processInlineFormatting(p)}</p>`;
-  }).join('\n\n');
+  }).join('\n');
 }
 
 // System prompts for different scenarios
