@@ -62,28 +62,42 @@
       @close="showShareModal = false"
     >
       <div class="space-y-4">
-        <div v-if="publishedPageId" class="flex items-center gap-3 p-3 rounded-md border border-slate-200 bg-slate-50">
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-slate-900">🎉 Page Published!</p>
-            <p class="text-xs text-slate-500">Copy this ID to share your page:</p>
-            <p class="mt-1 font-mono text-sm text-slate-700 bg-white px-2 py-1 rounded border border-slate-200">
-              {{ publishedPageId }}
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button 
-              @click="copyPageId"
-              class="p-1.5 rounded-md hover:bg-white text-slate-500 hover:text-slate-900 transition-all duration-150"
-              title="Copy page ID"
-            >
-              <Icon icon="lucide:copy" class="w-4 h-4" />
-            </button>
+        <div v-if="publishedPageId" class="flex items-center gap-3 p-4 rounded-md border border-slate-200 bg-slate-50">
+          <div class="flex-1 min-w-0 space-y-2">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🎉</span>
+              <p class="text-sm font-medium text-slate-900">Page Published!</p>
+            </div>
+            <div class="space-y-1.5">
+              <p class="text-xs text-slate-500">Copy this link to share your page:</p>
+              <div class="flex items-center gap-2">
+                <p class="flex-1 font-mono text-sm text-slate-700 bg-white px-3 py-1.5 rounded border border-slate-200 truncate">
+                  {{ `${$config.public.appUrl}/${publishedPageId}` }}
+                </p>
+                <div class="relative">
+                  <button 
+                    @click="copyPageId"
+                    class="p-2 rounded-md hover:bg-white text-slate-500 hover:text-slate-900 transition-all duration-150 border border-transparent hover:border-slate-200"
+                    title="Copy page URL"
+                  >
+                    <Icon icon="lucide:copy" class="w-4 h-4" />
+                  </button>
+                  <!-- Copied Message -->
+                  <div
+                    v-if="showCopiedMessage"
+                    class="absolute bottom-full right-0 mb-2 px-2 py-1 text-xs font-medium text-white bg-slate-900 rounded shadow-sm animate-fade-in-down"
+                  >
+                    Copied!
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
         <div v-else class="space-y-3">
           <p class="text-sm font-medium text-slate-700">Make your document public</p>
-          <p class="text-xs text-slate-500">Once published, anyone with the page ID can view this document.</p>
+          <p class="text-xs text-slate-500">Once published, anyone with the page link can view this document.</p>
           <button
             v-if="!user"
             @click="handleLogin"
@@ -356,6 +370,7 @@ const router = useRouter();
 const user = useSupabaseUser();
 const showUserMenu = ref(false);
 const supabase = useSupabaseClient();
+const showCopiedMessage = ref(false);
 
 const { storage, initStorage } = useStorage();
 
@@ -644,8 +659,15 @@ async function copyPageId() {
   if (!publishedPageId.value) return;
   
   try {
-    await navigator.clipboard.writeText(publishedPageId.value);
-    alert('Page ID copied to clipboard!');
+    const config = useRuntimeConfig();
+    const pageUrl = `${config.public.appUrl}/${publishedPageId.value}`;
+    await navigator.clipboard.writeText(pageUrl);
+    
+    // Show and auto-hide the copied message
+    showCopiedMessage.value = true;
+    setTimeout(() => {
+      showCopiedMessage.value = false;
+    }, 2000);
   } catch (error) {
     console.error('Failed to copy to clipboard:', error);
     alert('Failed to copy to clipboard. Please copy manually.');
@@ -759,5 +781,20 @@ async function copyPageId() {
   height: auto;
   margin: 1rem 0;
   border-radius: 0.375rem;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.2s ease-out;
 }
 </style> 

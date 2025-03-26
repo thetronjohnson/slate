@@ -30,9 +30,9 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
-    openaiApiKey: process.env.OPENAI_API_KEY,
     public: {
-      // Public variables go here
-    }
+      appUrl: process.env.APP_URL
+    },
+    openaiApiKey: process.env.OPENAI_API_KEY,
   }
 })

@@ -24,23 +24,32 @@
     </Modal>
 
     <!-- Header -->
-    <header class="bg-white border-b border-slate-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-          <h1 class="text-xl font-semibold text-slate-900">Public Pages</h1>
-          <button
-            @click="router.push('/')"
-            class="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900"
-          >
-            <Icon icon="lucide:arrow-left" class="w-4 h-4" />
-            Back to Editor
-          </button>
+    <header class="flex items-center h-12 bg-white/80 backdrop-blur border-b border-slate-200/50 shadow-sm">
+      <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-full">
+          <!-- Left side - Adjusted to match Sidebar positioning -->
+          <div class="flex items-center gap-2 pl-[11px]">
+            <button
+              @click="router.push('/')"
+              class="p-1 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100 transition-all duration-150"
+              title="Back to Editor"
+            >
+              <Icon icon="lucide:arrow-left" class="w-4 h-4" />
+            </button>
+            <span class="font-bold text-sm text-slate-700">Slate Editor</span>
+          </div>
         </div>
       </div>
     </header>
 
     <!-- Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Title Section -->
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold text-slate-900">Public Pages</h1>
+        <p class="mt-1 text-sm text-slate-500">Public pages can be shared with anyone and cannot be updated</p>
+      </div>
+
       <div v-if="isLoading" class="flex justify-center py-12">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
       </div>
@@ -69,12 +78,28 @@
               </p>
             </div>
             <div class="flex items-center gap-1">
+              <div class="relative">
+                <button
+                  @click="copyPageId(page.id)"
+                  class="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                  title="Copy page URL"
+                >
+                  <Icon icon="lucide:copy" class="w-4 h-4" />
+                </button>
+                <!-- Copied Message -->
+                <div
+                  v-if="showCopiedMessage === page.id"
+                  class="absolute bottom-full right-0 mb-2 px-3 py-1 text-xs font-medium text-white bg-slate-900 rounded shadow-sm animate-fade-in-down"
+                >
+                  Link copied!
+                </div>
+              </div>
               <button
-                @click="copyPageId(page.id)"
+                @click="openPage(page.id)"
                 class="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-                title="Copy page ID"
+                title="Open page"
               >
-                <Icon icon="lucide:copy" class="w-4 h-4" />
+                <Icon icon="lucide:external-link" class="w-4 h-4" />
               </button>
               <button
                 @click="handleDelete(page)"
@@ -104,7 +129,9 @@ const isLoading = ref(true)
 const isDeleting = ref(false)
 const showDeleteModal = ref(false)
 const pageToDelete = ref(null)
+const showUserMenu = ref(false)
 const user = useSupabaseUser()
+const showCopiedMessage = ref(null)
 
 onMounted(async () => {
   if (!user.value) {
@@ -148,12 +175,23 @@ function getPreview(content) {
 
 async function copyPageId(id) {
   try {
-    await navigator.clipboard.writeText(id)
-    alert('Page ID copied to clipboard!')
+    const config = useRuntimeConfig();
+    const pageUrl = `${config.public.appUrl}/${id}`;
+    await navigator.clipboard.writeText(pageUrl);
+    
+    // Show and auto-hide the copied message for this specific page
+    showCopiedMessage.value = id;
+    setTimeout(() => {
+      showCopiedMessage.value = null;
+    }, 2000);
   } catch (error) {
-    console.error('Failed to copy to clipboard:', error)
-    alert('Failed to copy to clipboard. Please copy manually.')
+    console.error('Failed to copy to clipboard:', error);
+    alert('Failed to copy to clipboard. Please copy manually.');
   }
+}
+
+function openPage(id) {
+  window.open(`/${id}`, '_blank');
 }
 
 function handleDelete(page) {
@@ -187,4 +225,33 @@ async function confirmDelete() {
     pageToDelete.value = null
   }
 }
-</script> 
+
+
+async function handleLogout() {
+  try {
+    const supabase = useSupabaseClient()
+    await supabase.auth.signOut()
+    showUserMenu.value = false
+    await router.push('/login')
+  } catch (error) {
+    console.error('Error signing out:', error)
+  }
+}
+</script>
+
+<style>
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.2s ease-out;
+}
+</style> 
