@@ -5,8 +5,19 @@ export default defineNuxtConfig({
   ssr: true,
   modules: [
     '@nuxtjs/tailwindcss',
-    '@nuxtjs/google-fonts'
+    '@nuxtjs/google-fonts',
+    '@nuxtjs/supabase',
   ],
+  supabase: {
+    redirect: false,
+    redirectOptions: {
+      login: '/login',
+      callback: '/auth/callback',
+    },
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY,
+    serviceKey: process.env.SUPABASE_SERVICE_KEY
+  },
   googleFonts: {
     families: {
       'Nunito Sans': [300, 400, 500, 600, 700],

@@ -101,7 +101,36 @@
             <Icon icon="lucide:download" class="w-4 h-4" />
           </button>
           <div class="h-4 w-px bg-gray-200"></div>
+          <!-- User Profile / Login Button -->
+          <div class="relative" v-if="user">
+            <button 
+              @click="showUserMenu = !showUserMenu"
+              class="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden border-2 border-slate-200 hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500"
+            >
+              <img 
+                :src="user.user_metadata?.avatar_url" 
+                :alt="user.user_metadata?.full_name"
+                class="w-full h-full object-cover"
+              />
+            </button>
+            <!-- Dropdown Menu -->
+            <div 
+              v-if="showUserMenu"
+              class="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1"
+            >
+              <div class="px-4 py-2 text-sm text-slate-700 border-b border-slate-100">
+                {{ user.user_metadata?.full_name }}
+              </div>
+              <button
+                @click="handleLogout"
+                class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
           <button 
+            v-else
             @click="handleLogin" 
             class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-800 transition-all duration-200 text-sm font-medium active:scale-95"
           >
@@ -234,6 +263,9 @@ const showExportModal = ref(false);
 const isExporting = ref(false);
 const editorContainer = ref(null);
 const router = useRouter();
+const user = useSupabaseUser();
+const showUserMenu = ref(false);
+const supabase = useSupabaseClient();
 
 const { storage, initStorage } = useStorage();
 
@@ -282,6 +314,13 @@ onMounted(async () => {
   } catch (error) {
     console.error('Error loading data:', error);
   }
+
+  // Close user menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (showUserMenu.value && !e.target.closest('.relative')) {
+      showUserMenu.value = false;
+    }
+  });
 });
 
 function selectFile(file) {
@@ -472,11 +511,19 @@ function handleFileRename(file) {
   }
 }
 
-function handleLogin() {
-  // For now, just log to console
-  console.log('Login clicked');
-  // You can implement actual login logic here
-  // router.push('/login');
+async function handleLogout() {
+  try {
+    await supabase.auth.signOut();
+    showUserMenu.value = false;
+    await router.push('/login');
+  } catch (error) {
+    console.error('Error signing out:', error);
+  }
+}
+
+async function handleLogin() {
+  // Go to login page
+  await router.push('/login')
 }
 </script>
 
