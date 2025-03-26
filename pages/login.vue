@@ -1,25 +1,20 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-slate-200">
+  <div class="min-h-screen bg-white flex items-center justify-center px-4">
+    <div class="max-w-md w-full space-y-8 text-center">
       <div>
-        <h1 class="text-4xl font-extrabold text-center text-slate-900 mb-2">Slate</h1>
-        <h2 class="mt-6 text-3xl font-bold text-center text-slate-800">Sign in</h2>
-        <p class="mt-2 text-sm text-center text-slate-600">
-          Sign in with your Google account for easy access.
+        <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Slate</h1>
+        <h2 class="text-xl font-medium text-slate-600 mb-2">Welcome back</h2>
+        <p class="text-sm text-slate-500">
+          Continue with Google to access your workspace
         </p>
       </div>
-      <div class="mt-8">
+      <div class="flex flex-col items-center gap-6">
         <button
           @click="signInWithGoogle"
-          :class="[
-            'group relative w-full flex justify-center py-3 px-4 border border-transparent',
-            'text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2',
-            'focus:ring-offset-2 transition-colors bg-slate-900 hover:bg-slate-800',
-            'focus:ring-slate-500'
-          ]"
+          class="flex items-center gap-3 px-6 py-3 rounded-md bg-slate-900 text-white hover:bg-slate-800 transition-all duration-200 text-sm font-medium active:scale-95 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
         >
-          <span v-if="!isLoading" class="flex items-center justify-center">
-            <Icon icon="logos:google-icon" class="w-5 h-5 mr-2" />
+          <span v-if="!isLoading" class="flex items-center justify-center gap-2">
+            <Icon icon="logos:google-icon" class="w-5 h-5" />
             Sign in with Google
           </span>
           <span v-else class="flex items-center justify-center">
@@ -27,6 +22,12 @@
             Signing in...
           </span>
         </button>
+        <div class="text-xs text-slate-400">
+          By continuing, you agree to our
+          <a href="#" class="text-slate-600 hover:text-slate-900 hover:underline">Terms of Service</a>
+          and
+          <a href="#" class="text-slate-600 hover:text-slate-900 hover:underline">Privacy Policy</a>
+        </div>
         <p v-if="errorMessage" class="mt-2 text-sm text-center text-red-600">
           {{ errorMessage }}
         </p>
@@ -47,7 +48,7 @@ const user = useSupabaseUser()
 
 onMounted(async () => {
   if (user.value) {
-    await router.push('/dashboard')
+    await router.push('/')
   }
 })
 
