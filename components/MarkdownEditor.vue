@@ -8,6 +8,37 @@
       @update-content="updateSelectedText"
     />
     
+    <!-- Save Status -->
+    <div class="fixed bottom-4 right-4 flex items-center gap-2">
+      <transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-2"
+      >
+        <div 
+          v-if="saveStatus" 
+          class="text-xs px-3 py-1.5 rounded-md bg-white shadow-sm border border-slate-200/50 text-slate-500 flex items-center gap-2"
+        >
+          <Icon 
+            icon="lucide:check"
+            class="w-3.5 h-3.5"
+          />
+          Saved
+        </div>
+      </transition>
+      
+      <button
+        @click="saveContent"
+        class="p-2 rounded-md bg-white shadow-sm border border-slate-200/50 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all duration-200 active:scale-95"
+        title="Save (⌘S)"
+      >
+        <Icon icon="lucide:save" class="w-4 h-4" />
+      </button>
+    </div>
+    
     <!-- Editor Content -->
     <div class="bg-white h-full">
       <editor-content 
@@ -44,10 +75,16 @@ const props = defineProps({
   modelValue: {
     type: String,
     default: ''
+  },
+  fileId: {
+    type: String,
+    required: true
   }
 });
 
 const emit = defineEmits(['update:modelValue']);
+const saveStatus = ref('');
+let saveTimeout = null;
 
 // Create the editor
 const editor = useEditor({
@@ -73,6 +110,13 @@ const editor = useEditor({
   ],
   onUpdate: ({ editor }) => {
     emit('update:modelValue', editor.getHTML());
+    // Trigger auto-save
+    if (saveTimeout) clearTimeout(saveTimeout);
+    // Clear any existing "Saved" message
+    saveStatus.value = '';
+    saveTimeout = setTimeout(() => {
+      saveContent();
+    }, 1500);
   }
 });
 
@@ -220,6 +264,9 @@ onBeforeUnmount(() => {
   if (editor.value) {
     editor.value.destroy();
   }
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
 });
 
 // Expose the editor and menu items to the parent component
@@ -235,6 +282,18 @@ const showCommandPalette = ref(false);
 // Setup keyboard shortcut
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
+  // Load content from localStorage on mount
+  const savedContent = localStorage.getItem(`editor-content-${props.fileId}`);
+  if (savedContent && editor.value) {
+    editor.value.commands.setContent(savedContent);
+  }
+  // Add keyboard shortcut for saving
+  window.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      saveContent();
+    }
+  });
 });
 
 onBeforeUnmount(() => {
@@ -282,14 +341,25 @@ function handleCommandPalette() {
   showCommandPalette.value = true;
 }
 
-onMounted(() => {
-  window.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      handleCommandPalette();
-    }
-  });
-});
+// Save content to localStorage
+async function saveContent() {
+  if (!editor.value) return;
+  
+  try {
+    const content = editor.value.getHTML();
+    localStorage.setItem(`editor-content-${props.fileId}`, content);
+    saveStatus.value = 'saved';
+    
+    // Hide the "Saved" indicator after 2 seconds
+    setTimeout(() => {
+      if (saveStatus.value === 'saved') {
+        saveStatus.value = '';
+      }
+    }, 2000);
+  } catch (error) {
+    console.error('Error saving content:', error);
+  }
+}
 </script>
 
 <style>

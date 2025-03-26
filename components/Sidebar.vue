@@ -55,7 +55,9 @@
     @confirm="handleDeleteFile"
   >
     <p class="text-sm text-slate-600">
-      Are you sure you want to delete "{{ fileToDelete?.name }}"? This action cannot be undone.
+      Are you sure you want to delete "<span class="font-medium text-slate-900">{{ fileToDelete?.name }}</span>"?
+      <br>
+      <span class="text-red-600 mt-2 block">This action cannot be undone.</span>
     </p>
   </Modal>
 
@@ -179,7 +181,12 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['select-file', 'create-file', 'toggle-sidebar']);
+const emit = defineEmits([
+  'select-file',
+  'create-file',
+  'toggle-sidebar',
+  'delete-file'
+]);
 
 // Modal states
 const showNewFileModal = ref(false);
@@ -230,18 +237,11 @@ function handleRenameFile() {
 
 function handleDeleteFile() {
   if (fileToDelete.value) {
-    const index = props.files.findIndex(f => f.id === fileToDelete.value.id);
-    if (index !== -1) {
-      props.files.splice(index, 1);
-      if (props.activeFile?.id === fileToDelete.value.id) {
-        if (props.files.length > 0) {
-          emit('select-file', props.files[0]);
-        } else {
-          emit('select-file', null);
-        }
-      }
-    }
+    // Remove file content from localStorage
+    localStorage.removeItem(`editor-content-${fileToDelete.value.id}`);
+    emit('delete-file', fileToDelete.value);
     showDeleteModal.value = false;
+    fileToDelete.value = null;
   }
 }
 </script> 

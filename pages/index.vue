@@ -67,6 +67,7 @@
         @create-file="createFile" 
         :is-collapsed="!isSidebarOpen"
         @toggle-sidebar="toggleSidebar"
+        @delete-file="deleteFile"
       />
     </div>
     
@@ -154,6 +155,7 @@
             ref="editorRef"
             v-model="activeFile.content" 
             @update:modelValue="updateFileContent"
+            :fileId="activeFile.id"
           />
           <div v-else class="flex flex-col items-center justify-center h-64 mt-12 text-gray-400">
             <Icon icon="lucide:file-text" class="w-16 h-16 mb-4 text-gray-200" />
@@ -398,6 +400,19 @@ function toggleSidebar() {
   } catch (error) {
     console.error('Error saving sidebar state:', error);
   }
+}
+
+function deleteFile(file) {
+  // Remove from files array
+  files.value = files.value.filter(f => f.id !== file.id);
+  
+  // If the deleted file was active, select another file or clear active file
+  if (activeFile.value?.id === file.id) {
+    activeFile.value = files.value[0] || null;
+  }
+  
+  // Save updated files list
+  saveFiles();
 }
 </script>
 
