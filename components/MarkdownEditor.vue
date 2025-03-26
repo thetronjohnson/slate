@@ -70,6 +70,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { Icon } from '@iconify/vue';
 import CommandPalette from './CommandPalette.vue';
+import { useStorage } from '../composables/useStorage';
 
 const props = defineProps({
   modelValue: {
@@ -85,6 +86,9 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 const saveStatus = ref('');
 let saveTimeout = null;
+
+// Track if initial content is loaded
+const isInitialContentLoaded = ref(false);
 
 // Create the editor
 const editor = useEditor({
@@ -280,12 +284,16 @@ defineExpose({
 const showCommandPalette = ref(false);
 
 // Setup keyboard shortcut
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('keydown', handleKeydown);
-  // Load content from localStorage on mount
-  const savedContent = localStorage.getItem(`editor-content-${props.fileId}`);
-  if (savedContent && editor.value) {
-    editor.value.commands.setContent(savedContent);
+  try {
+    const savedContent = await storage.getDocument(props.fileId);
+    if (savedContent && editor.value && !isInitialContentLoaded.value) {
+      editor.value.commands.setContent(savedContent);
+      isInitialContentLoaded.value = true;
+    }
+  } catch (error) {
+    console.error('Error loading content:', error);
   }
   // Add keyboard shortcut for saving
   window.addEventListener('keydown', (e) => {
@@ -341,13 +349,28 @@ function handleCommandPalette() {
   showCommandPalette.value = true;
 }
 
-// Save content to localStorage
+// Watch for fileId changes to load content
+watch(() => props.fileId, async (newId, oldId) => {
+  // Only load content if it's a different file
+  if (newId && newId !== oldId) {
+    try {
+      const content = await storage.getDocument(newId);
+      if (content && editor.value) {
+        editor.value.commands.setContent(content);
+      }
+    } catch (error) {
+      console.error('Error loading content for new file:', error);
+    }
+  }
+}, { immediate: true });
+
+// Save content to IndexedDB
 async function saveContent() {
-  if (!editor.value) return;
+  if (!editor.value || !props.fileId) return;
   
   try {
     const content = editor.value.getHTML();
-    localStorage.setItem(`editor-content-${props.fileId}`, content);
+    await storage.saveDocument(props.fileId, content);
     saveStatus.value = 'saved';
     
     // Hide the "Saved" indicator after 2 seconds
@@ -358,8 +381,11 @@ async function saveContent() {
     }, 2000);
   } catch (error) {
     console.error('Error saving content:', error);
+    saveStatus.value = 'error';
   }
 }
+
+const { storage } = useStorage();
 </script>
 
 <style>

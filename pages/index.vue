@@ -68,6 +68,7 @@
         :is-collapsed="!isSidebarOpen"
         @toggle-sidebar="toggleSidebar"
         @delete-file="deleteFile"
+        @rename-file="handleFileRename"
       />
     </div>
     
@@ -205,20 +206,11 @@ import { ref, onMounted, nextTick, computed } from 'vue';
 import { Icon } from '@iconify/vue';
 import Modal from '../components/Modal.vue';
 import TurndownService from 'turndown';
-
-// Sample files data structure
-const files = ref([]);
-const activeFile = ref(null);
-const editorRef = ref(null);
-const isSidebarOpen = ref(true);
-const showExportModal = ref(false);
-const isExporting = ref(false);
-const editorContainer = ref(null);
+import { useStorage } from '../composables/useStorage';
 
 // Local Storage Keys
-const STORAGE_KEYS = {
-  FILES: 'slate-files',
-  SIDEBAR_STATE: 'slate-sidebar-state'
+const SETTINGS = {
+  SIDEBAR_STATE: 'sidebarState'
 };
 
 // Initialize turndown service for HTML to Markdown conversion
@@ -270,22 +262,44 @@ const templates = [
   }
 ];
 
-onMounted(() => {
-  loadFromLocalStorage();
-});
+const files = ref([]);
+const activeFile = ref(null);
+const editorRef = ref(null);
+const isSidebarOpen = ref(true);
+const showExportModal = ref(false);
+const isExporting = ref(false);
+const editorContainer = ref(null);
 
-function loadFromLocalStorage() {
+const { storage, initStorage } = useStorage();
+
+onMounted(async () => {
+  await initStorage();
   try {
-    // Load files
-    const savedFiles = localStorage.getItem(STORAGE_KEYS.FILES);
-    if (savedFiles) {
-      files.value = JSON.parse(savedFiles);
-      if (files.value.length > 0) {
-        activeFile.value = files.value[0];
+    // Load sidebar state
+    const sidebarState = await storage.getSetting(SETTINGS.SIDEBAR_STATE);
+    if (sidebarState !== null) {
+      isSidebarOpen.value = sidebarState;
+    }
+    
+    // Load saved files
+    const savedFiles = await storage.getFiles();
+    files.value = savedFiles;
+    
+    // If we have files, load the first one's content
+    if (files.value.length > 0) {
+      activeFile.value = files.value[0];
+      // Load the content for the active file
+      const content = await storage.getDocument(activeFile.value.id);
+      if (content) {
+        // Create a reactive property for content
+        activeFile.value = {
+          ...activeFile.value,
+          content
+        };
       }
     } else {
-      // Create a default file with a welcome message
-      createFile('Getting Started', `
+      // Create a default welcome file if no files exist
+      await createFile('Getting Started', `
         <h1>Welcome to Slate</h1>
         <p>This is your first document. Here are some things you can do:</p>
         <ul>
@@ -300,59 +314,50 @@ function loadFromLocalStorage() {
         </blockquote>
       `.trim());
     }
-    
-    // Load sidebar state
-    const sidebarState = localStorage.getItem(STORAGE_KEYS.SIDEBAR_STATE);
-    if (sidebarState !== null) {
-      isSidebarOpen.value = JSON.parse(sidebarState);
-    }
   } catch (error) {
-    console.error('Error loading from localStorage:', error);
-    // Reset to default state if there's an error
-    files.value = [];
-    createFile('Getting Started', '<h1>Welcome to Slate</h1><p>This is your first document.</p>');
+    console.error('Error loading data:', error);
   }
-}
+});
 
 function selectFile(file) {
   activeFile.value = file;
-  // Reset scroll position when switching files
-  nextTick(() => {
-    if (editorContainer.value) {
-      editorContainer.value.scrollTop = 0;
-    }
-  });
+  // Save files list to persist any changes (like renames)
+  saveFiles();
 }
 
-function createFile(name = 'Untitled', content = '') {
-  const newFile = {
-    id: Date.now().toString(),
-    name: name,
-    content: content,
+async function createFile(name, content = '') {
+  const file = {
+    id: crypto.randomUUID(),
+    name,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
   
-  files.value.push(newFile);
-  activeFile.value = newFile;
+  // Save the content first
+  await storage.saveDocument(file.id, content || '<h1>Untitled</h1>');
+
+  files.value.push(file);
+  activeFile.value = file;
+  // Save file metadata
   saveFiles();
 }
 
-function updateFileContent(content) {
+function updateFileContent(newContent) {
   if (activeFile.value) {
-    activeFile.value.content = content;
+    // Update the active file's content
+    activeFile.value = {
+      ...activeFile.value,
+      content: newContent
+    };
     activeFile.value.updatedAt = new Date().toISOString();
     saveFiles();
   }
 }
 
 function saveFiles() {
-  try {
-    localStorage.setItem(STORAGE_KEYS.FILES, JSON.stringify(files.value));
-  } catch (error) {
-    console.error('Error saving files to localStorage:', error);
-    alert('Failed to save your changes. Please make sure you have enough storage space.');
-  }
+  storage.saveFiles(files.value).catch(error => {
+    console.error('Error saving files:', error);
+  });
 }
 
 async function exportMarkdown() {
@@ -457,11 +462,9 @@ function formatDate(dateString) {
 
 function toggleSidebar() {
   isSidebarOpen.value = !isSidebarOpen.value;
-  try {
-    localStorage.setItem(STORAGE_KEYS.SIDEBAR_STATE, JSON.stringify(isSidebarOpen.value));
-  } catch (error) {
+  storage.saveSetting(SETTINGS.SIDEBAR_STATE, isSidebarOpen.value).catch(error => {
     console.error('Error saving sidebar state:', error);
-  }
+  });
 }
 
 function deleteFile(file) {
@@ -475,6 +478,33 @@ function deleteFile(file) {
   
   // Save updated files list
   saveFiles();
+}
+
+// Handle file rename
+function handleFileRename(file) {
+  // Find and update the file in our list
+  const index = files.value.findIndex(f => f.id === file.id);
+  if (index !== -1) {
+    // Preserve the current content
+    const currentContent = files.value[index].content;
+    files.value[index] = {
+      ...files.value[index],
+      name: file.name,
+      updatedAt: file.updatedAt,
+      content: currentContent // Keep the existing content
+    };
+    
+    // If this is the active file, update it too
+    if (activeFile.value?.id === file.id) {
+      activeFile.value = {
+        ...files.value[index],
+        content: currentContent // Keep the existing content
+      };
+    }
+    
+    // Save the updated files list
+    saveFiles();
+  }
 }
 </script>
 

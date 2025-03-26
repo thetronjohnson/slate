@@ -165,6 +165,7 @@
 import { ref, nextTick } from 'vue';
 import { Icon } from '@iconify/vue';
 import Modal from './Modal.vue';
+import { useStorage } from '../composables/useStorage';
 
 const props = defineProps({
   files: {
@@ -185,7 +186,8 @@ const emit = defineEmits([
   'select-file',
   'create-file',
   'toggle-sidebar',
-  'delete-file'
+  'delete-file',
+  'rename-file'
 ]);
 
 // Modal states
@@ -197,6 +199,8 @@ const fileToDelete = ref(null);
 const fileToRename = ref(null);
 const newFileInput = ref(null);
 const renameInput = ref(null);
+
+const { storage } = useStorage();
 
 function createNewFile() {
   showNewFileModal.value = true;
@@ -229,16 +233,25 @@ function handleCreateFile() {
 
 function handleRenameFile() {
   if (newFileName.value.trim() && fileToRename.value) {
-    fileToRename.value.name = newFileName.value.trim();
-    emit('select-file', fileToRename.value);
+    // Preserve the current content and other properties
+    const updatedFile = {
+      ...fileToRename.value,
+      name: newFileName.value.trim(),
+      updatedAt: new Date().toISOString()
+    };
+    storage.saveFiles(props.files).catch(error => {
+      console.error('Error saving renamed file:', error);
+    });
+    emit('rename-file', updatedFile);
     showRenameModal.value = false;
+    fileToRename.value = null;
   }
 }
 
-function handleDeleteFile() {
+async function handleDeleteFile() {
   if (fileToDelete.value) {
-    // Remove file content from localStorage
-    localStorage.removeItem(`editor-content-${fileToDelete.value.id}`);
+    // Remove file content from IndexedDB
+    await storage.deleteDocument(fileToDelete.value.id);
     emit('delete-file', fileToDelete.value);
     showDeleteModal.value = false;
     fileToDelete.value = null;

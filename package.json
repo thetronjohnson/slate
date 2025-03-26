@@ -31,6 +31,7 @@
     "@vueuse/core": "^13.0.0",
     "html2pdf.js": "^0.10.3",
     "jspdf": "^3.0.1",
+    "localforage": "^1.10.0",
     "lucide-vue": "^0.484.0",
     "nuxt": "^3.16.1",
     "openai": "^4.89.0",
