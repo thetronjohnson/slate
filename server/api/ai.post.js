@@ -35,11 +35,11 @@ export default defineEventHandler(async (event) => {
       messages: [
         {
           role: "system",
-          content: "You are a helpful writing assistant. Modify the selected text according to the user's prompt. Return only the modified content, preserving any HTML formatting. Keep your response focused only on the selected text."
+          content: "You are a helpful writing assistant. Modify the given text according to the user's prompt. Return only the modified content, preserving any HTML formatting."
         },
         {
           role: "user",
-          content: `Selected text: ${content}\n\nPrompt: ${prompt}\n\nModify only the selected text according to the prompt and return the updated content.`
+          content: `Content: ${content}\n\nPrompt: ${prompt}\n\nModify the content according to the prompt and return the updated content.`
         }
       ],
     });
