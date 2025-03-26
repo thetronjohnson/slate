@@ -40,13 +40,14 @@
 
               <div class="mt-6 flex justify-end gap-3">
                 <button
+                  v-if="showDefaultCancel"
                   type="button"
                   class="inline-flex justify-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all duration-200 active:scale-95"
                   @click="close"
                 >
                   Cancel
                 </button>
-                <slot name="actions">
+                <template v-if="!$slots.actions">
                   <button
                     type="button"
                     :class="[
@@ -59,7 +60,8 @@
                   >
                     {{ confirmText }}
                   </button>
-                </slot>
+                </template>
+                <slot name="actions" />
               </div>
             </DialogPanel>
           </TransitionChild>
@@ -88,6 +90,10 @@ defineProps({
   danger: {
     type: Boolean,
     default: false
+  },
+  showDefaultCancel: {
+    type: Boolean,
+    default: true
   }
 });
 

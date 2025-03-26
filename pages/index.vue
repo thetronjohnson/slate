@@ -55,6 +55,79 @@
       </template>
     </Modal>
     
+    <!-- Share Modal -->
+    <Modal
+      :is-open="showShareModal"
+      title="Publish Page"
+      @close="showShareModal = false"
+    >
+      <div class="space-y-4">
+        <div v-if="publishedPageId" class="flex items-center gap-3 p-3 rounded-md border border-slate-200 bg-slate-50">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-slate-900">🎉 Page Published!</p>
+            <p class="text-xs text-slate-500">Copy this ID to share your page:</p>
+            <p class="mt-1 font-mono text-sm text-slate-700 bg-white px-2 py-1 rounded border border-slate-200">
+              {{ publishedPageId }}
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button 
+              @click="copyPageId"
+              class="p-1.5 rounded-md hover:bg-white text-slate-500 hover:text-slate-900 transition-all duration-150"
+              title="Copy page ID"
+            >
+              <Icon icon="lucide:copy" class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        
+        <div v-else class="space-y-3">
+          <p class="text-sm font-medium text-slate-700">Make your document public</p>
+          <p class="text-xs text-slate-500">Once published, anyone with the page ID can view this document.</p>
+          <button
+            v-if="!user"
+            @click="handleLogin"
+            class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all duration-200 text-sm"
+          >
+            <Icon icon="lucide:log-in" class="w-4 h-4" />
+            Sign in to publish
+          </button>
+          <div v-else class="space-y-4">
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-slate-700">Page Name</label>
+              <input
+                v-model="publishPageName"
+                type="text"
+                placeholder="Enter a name for your page"
+                class="w-full px-3 py-2 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #actions>
+        <div class="flex justify-end gap-3">
+          <button
+            v-if="!publishedPageId"
+            type="button"
+            @click="publishPage"
+            :disabled="isPublishing || !publishPageName"
+            class="inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ isPublishing ? 'Publishing...' : 'Publish' }}
+          </button>
+          <button
+            v-else
+            type="button"
+            class="inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all duration-200 active:scale-95"
+            @click="showShareModal = false"
+          >
+            Done
+          </button>
+        </div>
+      </template>
+    </Modal>
+    
     <!-- Sidebar -->
     <div 
       class="h-full bg-white/80 backdrop-blur border-r border-slate-200/50 shadow-sm transition-all duration-300 ease-in-out z-10 flex flex-col"
@@ -94,6 +167,13 @@
           </div>
           <div class="h-4 w-px bg-gray-200 mx-2"></div>
           <button 
+            @click="showShareModal = true"
+            class="p-1.5 rounded-md hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all duration-150 active:scale-95"
+            title="Publish document"
+          >
+            <Icon icon="lucide:upload-cloud" class="w-4 h-4" />
+          </button>
+          <button 
             @click="showExportModal = true"
             class="p-1.5 rounded-md hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all duration-150 active:scale-95"
             title="Export document"
@@ -121,6 +201,12 @@
               <div class="px-4 py-2 text-sm text-slate-700 border-b border-slate-100">
                 {{ user.user_metadata?.full_name }}
               </div>
+              <button
+                @click="router.push('/pages')"
+                class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Public Pages
+              </button>
               <button
                 @click="handleLogout"
                 class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
@@ -261,6 +347,10 @@ const editorRef = ref(null);
 const isSidebarOpen = ref(true);
 const showExportModal = ref(false);
 const isExporting = ref(false);
+const showShareModal = ref(false);
+const publishPageName = ref('');
+const isPublishing = ref(false);
+const publishedPageId = ref(null);
 const editorContainer = ref(null);
 const router = useRouter();
 const user = useSupabaseUser();
@@ -524,6 +614,42 @@ async function handleLogout() {
 async function handleLogin() {
   // Go to login page
   await router.push('/login')
+}
+
+async function publishPage() {
+  if (!user.value || !activeFile.value) return;
+  
+  isPublishing.value = true;
+  try {
+    const { data, error } = await $fetch('/api/pages/publish', {
+      method: 'POST',
+      body: {
+        name: publishPageName.value,
+        content: activeFile.value.content,
+        userId: user.value.id
+      }
+    });
+    
+    if (error) throw error;
+    publishedPageId.value = data.id;
+  } catch (error) {
+    console.error('Error publishing page:', error);
+    alert('Failed to publish page. Please try again.');
+  } finally {
+    isPublishing.value = false;
+  }
+}
+
+async function copyPageId() {
+  if (!publishedPageId.value) return;
+  
+  try {
+    await navigator.clipboard.writeText(publishedPageId.value);
+    alert('Page ID copied to clipboard!');
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    alert('Failed to copy to clipboard. Please copy manually.');
+  }
 }
 </script>
 
