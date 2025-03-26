@@ -266,13 +266,30 @@ defineExpose({
 }
 
 .ProseMirror ul {
-  @apply list-disc pl-5 mb-4 text-gray-700;
+  @apply list-disc pl-5 mb-4 text-gray-700 space-y-1;
   font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .ProseMirror ol {
-  @apply list-decimal pl-5 mb-4 text-gray-700;
+  @apply list-decimal pl-5 mb-4 text-gray-700 space-y-1;
   font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Fix list item alignment */
+.ProseMirror ul li,
+.ProseMirror ol li {
+  @apply relative;
+}
+
+.ProseMirror ul li::marker,
+.ProseMirror ol li::marker {
+  @apply text-gray-400;
+}
+
+/* Ensure proper alignment for multi-line list items */
+.ProseMirror ul li p,
+.ProseMirror ol li p {
+  @apply m-0 inline align-top;
 }
 
 /* Task List Styling */

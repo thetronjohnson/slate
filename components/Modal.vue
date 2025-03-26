@@ -46,18 +46,20 @@
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  :class="[
-                    'inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-95',
-                    danger 
-                      ? 'bg-red-600 text-white hover:bg-red-700' 
-                      : 'bg-slate-900 text-white hover:bg-slate-800'
-                  ]"
-                  @click="confirm"
-                >
-                  {{ confirmText }}
-                </button>
+                <slot name="actions">
+                  <button
+                    type="button"
+                    :class="[
+                      'inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-95',
+                      danger 
+                        ? 'bg-red-600 text-white hover:bg-red-700' 
+                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                    ]"
+                    @click="confirm"
+                  >
+                    {{ confirmText }}
+                  </button>
+                </slot>
               </div>
             </DialogPanel>
           </TransitionChild>

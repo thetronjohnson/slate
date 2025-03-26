@@ -67,9 +67,9 @@
       <div class="flex items-center justify-between w-full" :class="{ 'justify-center': isCollapsed }">
         <span 
           v-if="!isCollapsed" 
-          class="font-medium text-sm text-slate-700"
+          class="font-bold text-sm text-slate-700"
         >
-          Files
+          Slate
         </span>
         
         <!-- Collapse/Expand Button -->
