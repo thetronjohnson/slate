@@ -81,6 +81,8 @@ import { useStorage } from '../composables/useStorage';
 import FloatingToolbar from './FloatingToolbar.vue';
 import { useEventListener } from '@vueuse/core';
 
+const { storage } = useStorage();
+
 const props = defineProps({
   modelValue: {
     type: String,
@@ -103,12 +105,27 @@ const isInitialContentLoaded = ref(false);
 const editor = useEditor({
   content: props.modelValue,
   extensions: [
-    Document,
-    Paragraph,
-    Text,
     StarterKit.configure({
       heading: {
         levels: [1, 2, 3]
+      },
+      code: {
+        // HTMLAttributes: {
+        //   class: 'inline-code',
+        // },
+        // keepMarks: true,
+        // excludes: undefined // Allow nesting with other marks
+      },
+      codeBlock: {
+        HTMLAttributes: {
+          class: 'code-block',
+        },
+        exitOnTripleEnter: true,
+        exitOnArrowDown: true,
+        languageClassPrefix: 'language-',
+        transformPastedText: false,
+        transformCopiedText: false,
+        markdown: true
       }
     }),
     Placeholder.configure({
@@ -378,8 +395,6 @@ async function saveContent() {
     saveStatus.value = 'error';
   }
 }
-
-const { storage } = useStorage();
 
 // Add method to select all editor content
 function selectAllContent(e) {

@@ -28,13 +28,13 @@
 
     <!-- Remove the existing footer and replace with floating button -->
     <div class="fixed bottom-4 right-4 z-50">
-      <a
-        href="https://useslate.com"
+      <NuxtLink
+        to="/" 
         class="flex items-center space-x-1 bg-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200 border border-slate-200 font-sans"
       >
         <span class="text-sm text-slate-700 font-sans">Published with</span>
         <span class="text-sm font-medium text-slate-900 font-sans">Slate</span>
-      </a>
+      </NuxtLink>
     </div>
   </div>
 </template>
@@ -43,6 +43,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import posthog from 'posthog-js'
 
 const router = useRouter()
 const route = useRoute()
@@ -63,6 +64,14 @@ watch(() => page.value, (newPage) => {
         { name: 'twitter:description', content: description }
       ]
     })
+    // Track page view anonymously
+    posthog.capture('published_page_viewed', {
+      page_id: route.params.id,
+      page_name: newPage.name,
+      $set_once: { // Only set these properties once per user
+        first_page_view_date: new Date().toISOString(),
+      }
+    });
   }
 })
 
@@ -87,106 +96,109 @@ async function fetchPage() {
 
 <style>
 .prose {
-  @apply font-editor;
+  font-family: 'Noto Serif', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .prose h1,
 .prose h2,
 .prose h3,
-.prose h4,
-.prose h5,
-.prose h6 {
-  @apply font-editor;
-}
-
 .prose p,
 .prose ul,
 .prose ol,
-.prose blockquote {
-  @apply font-editor;
+.prose li {
+  font-family: 'Noto Serif', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
 }
 
 .prose pre,
 .prose code {
-  @apply font-mono;
-}
-
-.prose {
-  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 0 1rem;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 .prose h1 {
   font-size: clamp(1.5rem, 5vw, 2rem);
   font-weight: 700;
   margin-bottom: 1rem;
-  color: #1a1a1a;
+  color: #111827; /* text-gray-900 */
   letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 .prose h2 {
   font-size: clamp(1.25rem, 4vw, 1.5rem);
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
-  color: #1a1a1a;
+  color: #1f2937; /* text-gray-800 */
+  letter-spacing: -0.01em;
 }
 
 .prose h3 {
   font-size: clamp(1.1rem, 3vw, 1.25rem);
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
-  color: #1a1a1a;
+  color: #1f2937; /* text-gray-800 */
 }
 
 .prose p {
   margin-bottom: 1rem;
   line-height: 1.7;
-  color: #374151;
+  color: #374151; /* text-gray-700 */
+  font-size: 1.05rem;
 }
 
 .prose ul, .prose ol {
   margin-bottom: 1rem;
   padding-left: 1.25rem;
+  color: #374151; /* text-gray-700 */
+  line-height: 1.7;
 }
 
 .prose li {
   margin-bottom: 0.25rem;
-  color: #374151;
 }
 
 .prose pre {
   background: #f8fafc;
   padding: 1rem;
-  border-radius: 0.375rem;
+  border-radius: 0 0.375rem 0.375rem 0;
   margin: 1rem 0;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.875rem;
+  font-size: 13px;
   color: #334155;
-  white-space: pre-wrap;
-  overflow-x: auto;
+  border-left: 4px solid #e2e8f0;
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
+  border-right: 1px solid rgba(226, 232, 240, 0.5);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
 }
 
 .prose code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.875rem;
-  background: #f8fafc;
+  font-size: 13px;
+  background: rgba(241, 245, 249, 0.7);
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   color: #334155;
+  border: 1px solid rgba(226, 232, 240, 0.5);
 }
 
 .prose blockquote {
   border-left: 4px solid #fde68a;
-  padding-left: 1rem;
+  padding: 0.5rem 1rem;
   margin: 1rem 0;
   color: #92400e;
-  background: #fef3c7;
-  padding: 0.5rem 1rem;
+  background: rgba(254, 243, 199, 0.5);
   border-radius: 0 0.375rem 0.375rem 0;
+  font-style: normal;
+}
+
+.prose blockquote p {
+  color: rgba(146, 64, 14, 0.9);
+  margin: 0;
+  line-height: 1.5;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
 }
 
 .prose img {

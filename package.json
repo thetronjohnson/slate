@@ -36,6 +36,7 @@
     "lucide-vue": "^0.484.0",
     "nuxt": "^3.16.1",
     "openai": "^4.89.0",
+    "posthog-js": "^1.233.1",
     "turndown": "^7.2.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"

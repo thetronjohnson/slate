@@ -4,7 +4,19 @@
 
 <script setup>
 import { watch, onMounted } from 'vue';
+import { useSupabaseUser } from '#imports';
+import posthog from 'posthog-js';
 
+const user = useSupabaseUser();
+
+// Initialize PostHog
+if (process.client) {  // Only initialize on client-side
+  posthog.init('phc_8RgRBIfbpxArBSvKOXraxiG8qlguh1vd71fZxx0iKwt', {
+    api_host: 'https://eu.i.posthog.com',
+    person_profiles: 'identified_only',
+    capture_pageview: false // We'll handle pageviews manually
+  });
+}
 
 // SEO Meta Tags
 useHead({
@@ -43,7 +55,7 @@ useHead({
 
 onMounted(() => {
   // Watch for authentication state changes at the app level
-  watch(useSupabaseUser(), (newUser) => {
+  watch(user, (newUser) => {
     // Clean up URL if it contains auth code
     if (process.client && window.location.search.includes('code=')) {
       window.history.replaceState({}, document.title, window.location.pathname);

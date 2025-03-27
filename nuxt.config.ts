@@ -20,7 +20,7 @@ export default defineNuxtConfig({
   },
   googleFonts: {
     families: {
-      'Domine': [300, 400, 500, 600, 700],
+      'Noto Serif': [300, 400, 500, 600, 700],
       'Nunito Sans': [300, 400, 500, 600, 700],
       'JetBrains Mono': [400, 500]
     },

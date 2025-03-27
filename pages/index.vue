@@ -289,7 +289,7 @@
           <div v-else class="flex flex-col items-center justify-center h-full mt-12 text-gray-400">
             <div class="max-w-md text-center">
               <Icon icon="lucide:book-open" class="w-20 h-20 mb-6 text-gray-200 mx-auto" />
-              <h2 class="text-xl font-semibold text-gray-600 mb-2">Welcome to Your SlateWorkspace</h2>
+              <h2 class="text-xl font-semibold text-gray-600 mb-2">Welcome to Your Slate Workspace</h2>
               <p class="text-gray-500 mb-8">Create your first page or choose from our templates to get started quickly.</p>
               
               <div class="space-y-3">
@@ -338,6 +338,7 @@ import { useStorage } from '../composables/useStorage';
 import { useRouter } from 'vue-router';
 import { useEventListener } from '@vueuse/core';
 import { useSupabaseClient, useSupabaseUser } from '#imports';
+import posthog from 'posthog-js';
 
 // Local Storage Keys
 const SETTINGS = {
@@ -413,7 +414,22 @@ const showCopiedMessage = ref(false);
 const { storage, initStorage } = useStorage();
 
 onMounted(async () => {
+  // Initialize storage
   await initStorage();
+  
+  // Add global listener to prevent default select all
+  useEventListener(document, 'keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+      // Only prevent default if we're not in an input or textarea
+      if (
+        e.target.tagName !== 'INPUT' && 
+        e.target.tagName !== 'TEXTAREA'
+      ) {
+        e.preventDefault();
+      }
+    }
+  });
+  
   try {
     // Load sidebar state
     const sidebarState = await storage.getSetting(SETTINGS.SIDEBAR_STATE);
@@ -465,8 +481,17 @@ onMounted(async () => {
     }
   });
 
-  // Add global listener to prevent default select all
-  useEventListener(document, 'keydown', handleSelectAll);
+  // Watch for user changes to identify them in PostHog
+  watch(user, (newUser) => {
+    if (newUser) {
+      posthog.identify(newUser.id, {
+        email: newUser.email,
+        name: newUser.user_metadata?.full_name,
+      });
+    } else {
+      posthog.reset(); // Clear user identification when logged out
+    }
+  }, { immediate: true });
 });
 
 function selectFile(file) {
@@ -490,6 +515,9 @@ async function createFile(name, content = '') {
   activeFile.value = file;
   // Save file metadata
   saveFiles();
+  posthog.capture('file_created', {
+    file_id: file.id,
+  });
 }
 
 function updateFileContent(newContent) {
@@ -628,6 +656,9 @@ function deleteFile(file) {
   
   // Save updated files list
   saveFiles();
+  posthog.capture('file_deleted', {
+    file_id: file.id,
+  });
 }
 
 // Handle file rename
@@ -677,6 +708,7 @@ async function handleLogin() {
       }
     });
     if (error) throw error;
+    posthog.capture('login_initiated');
   } catch (error) {
     console.error('Error signing in with Google:', error);
   }
@@ -698,6 +730,10 @@ async function publishPage() {
     
     if (error) throw error;
     publishedPageId.value = data.id;
+    posthog.capture('page_published', {
+      page_id: data.id,
+      page_name: publishPageName.value,
+    });
   } catch (error) {
     console.error('Error publishing page:', error);
     alert('Failed to publish page. Please try again.');
