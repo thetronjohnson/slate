@@ -117,7 +117,7 @@
               </button>
             </div>
           </div>
-          <div class="mt-4 text-sm text-slate-600 line-clamp-3" v-html="getPreview(page.content)"></div>
+          <div class="mt-4 text-sm text-slate-600 line-clamp-3"></div>
         </div>
       </div>
     </main>

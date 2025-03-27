@@ -23,7 +23,9 @@
         </p>
       </div>
 
-      <div v-else class="prose prose-slate max-w-none font-editor" v-html="page.content"></div>
+      <div v-else class="prose prose-slate max-w-none font-editor">
+        <EditorContent :editor="editor" />
+      </div>
     </main>
 
     <!-- Remove the existing footer and replace with floating button -->
@@ -40,18 +42,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import posthog from 'posthog-js'
+import { useEditor, EditorContent } from '@tiptap/vue-3'
+import StarterKit from '@tiptap/starter-kit'
+// Add any other Tiptap extensions you need for your content
 
 const router = useRouter()
 const route = useRoute()
 const page = ref(null)
 const isLoading = ref(true)
 
-// Add watch effect to update meta tags when page data changes
+const editor = useEditor({
+  extensions: [
+    StarterKit,
+    // Add other extensions as needed
+  ],
+  editable: false, // Make it read-only
+  content: '', // Will be updated when page data loads
+})
+
+// Update editor content when page data changes
 watch(() => page.value, (newPage) => {
+  if (newPage && editor.value) {
+    editor.value.commands.setContent(newPage.content)
+  }
   if (newPage) {
     const description = newPage.content.replace(/<[^>]*>/g, '').slice(0, 160) // Strip HTML and limit to 160 chars
     useHead({
@@ -73,6 +90,11 @@ watch(() => page.value, (newPage) => {
       }
     });
   }
+})
+
+// Clean up editor instance
+onBeforeUnmount(() => {
+  editor.value?.destroy()
 })
 
 onMounted(async () => {
