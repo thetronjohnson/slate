@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 
@@ -48,6 +48,23 @@ const router = useRouter()
 const route = useRoute()
 const page = ref(null)
 const isLoading = ref(true)
+
+// Add watch effect to update meta tags when page data changes
+watch(() => page.value, (newPage) => {
+  if (newPage) {
+    const description = newPage.content.replace(/<[^>]*>/g, '').slice(0, 160) // Strip HTML and limit to 160 chars
+    useHead({
+      title: newPage.name,
+      meta: [
+        { name: 'description', content: description },
+        // Open Graph meta tags
+        { property: 'og:description', content: description },
+        // Twitter meta tags
+        { name: 'twitter:description', content: description }
+      ]
+    })
+  }
+})
 
 onMounted(async () => {
   await fetchPage()
