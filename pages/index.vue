@@ -99,6 +99,13 @@
                   </div>
                 </div>
               </div>
+              <!-- New sync warning message -->
+              <div class="mt-3 flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                <Icon icon="lucide:alert-circle" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p class="text-xs text-amber-700">
+                  New changes are not automatically synced to published pages. To share your latest changes, please delete this published page and create a new one.
+                </p>
+              </div>
             </div>
           </div>
         </div>
