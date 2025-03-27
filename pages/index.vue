@@ -123,7 +123,7 @@
               class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all duration-200 text-sm font-medium active:scale-95"
             >
               <Icon icon="lucide:log-in" class="w-4 h-4" />
-              Sign up to publish
+              Login in to publish
             </button>
           </div>
         </div>
@@ -220,14 +220,14 @@
             class="p-1.5 rounded-md hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all duration-150 active:scale-95"
             title="Publish page"
           >
-            <Icon icon="lucide:upload-cloud" class="w-4 h-4" />
+            <Icon icon="lucide:share-2" class="w-4 h-4" />
           </button>
           <button 
             @click="showExportModal = true"
             class="p-1.5 rounded-md hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all duration-150 active:scale-95"
             title="Export page"
           >
-            <Icon icon="lucide:download" class="w-4 h-4" />
+            <Icon icon="lucide:file-down" class="w-4 h-4" />
           </button>
           <div class="h-4 w-px bg-gray-200"></div>
           <!-- User Profile / Login Button -->
@@ -330,13 +330,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue';
+import { ref, onMounted, nextTick, computed, watch } from 'vue';
 import { Icon } from '@iconify/vue';
 import Modal from '../components/Modal.vue';
 import TurndownService from 'turndown';
 import { useStorage } from '../composables/useStorage';
 import { useRouter } from 'vue-router';
 import { useEventListener } from '@vueuse/core';
+import { useSupabaseClient, useSupabaseUser } from '#imports';
 
 // Local Storage Keys
 const SETTINGS = {
@@ -410,19 +411,6 @@ const supabase = useSupabaseClient();
 const showCopiedMessage = ref(false);
 
 const { storage, initStorage } = useStorage();
-
-// Prevent default select all in the page
-function handleSelectAll(e) {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
-    // Only prevent default if we're not in an input or textarea
-    if (
-      e.target.tagName !== 'INPUT' && 
-      e.target.tagName !== 'TEXTAREA'
-    ) {
-      e.preventDefault();
-    }
-  }
-}
 
 onMounted(async () => {
   await initStorage();
@@ -673,15 +661,25 @@ async function handleLogout() {
   try {
     await supabase.auth.signOut();
     showUserMenu.value = false;
-    await router.push('/login');
+    await router.push('/'); // Redirect back to index page after logout
   } catch (error) {
     console.error('Error signing out:', error);
   }
 }
 
 async function handleLogin() {
-  // Go to login page
-  await router.push('/login')
+  const supabase = useSupabaseClient();
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`
+      }
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error signing in with Google:', error);
+  }
 }
 
 async function publishPage() {

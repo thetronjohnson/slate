@@ -106,10 +106,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, nextTick, watch } from 'vue';
 import { Icon } from '@iconify/vue';
 import { useRouter } from 'vue-router';
 import { useSupabaseUser } from '#imports';
+import { useSupabaseClient } from '#imports';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -126,6 +127,7 @@ const inputRef = ref(null);
 let savedSelection = null;
 const user = useSupabaseUser();
 const router = useRouter();
+const supabase = useSupabaseClient();
 
 const selectedTextPrompts = [
   'Fix grammar',
@@ -138,6 +140,62 @@ const fullDocumentPrompts = [
   'Create a marketing plan for my mobile app',
   'Create a survey'
 ];
+
+async function handleSubmit() {
+  if (!prompt.value.trim() || isLoading.value) return;
+  
+  try {
+    isLoading.value = true;
+    error.value = '';
+    
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: prompt.value,
+        content: props.selectedContent
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to get AI response');
+    }
+    
+    const data = await response.json();
+    emit('update-content', data.content);
+    close();
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+function close() {
+  if (savedSelection) {
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(savedSelection);
+  }
+  emit('close');
+}
+
+async function handleLogin() {
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`
+      }
+    });
+    if (error) throw error;
+    emit('close');
+  } catch (error) {
+    console.error('Error signing in with Google:', error);
+  }
+}
 
 function usePrompt(suggestion) {
   prompt.value = suggestion;
@@ -188,69 +246,8 @@ watch(() => props.isOpen, async (isOpen) => {
     }
   }
 });
+</script>
 
-async function handleSubmit() {
-  if (!prompt.value.trim() || isLoading.value) return;
-  
-  try {
-    isLoading.value = true;
-    error.value = '';
-    
-    const response = await fetch('/api/ai', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt: prompt.value,
-        content: props.selectedContent
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to get AI response');
-    }
-    
-    const data = await response.json();
-    
-    // Check if authentication is required
-    if (!data.success && data.requiresAuth) {
-      return;
-    }
-    
-    // If there's no content, it means there was an error
-    if (!data.content) {
-      throw new Error(data.message || 'Failed to get AI response');
-    }
-    
-    emit('update-content', data.content);
-    close();
-  } catch (e) {
-    error.value = e.message;
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-function close() {
-  if (savedSelection) {
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(savedSelection);
-  }
-  emit('close');
-}
-
-function executeCommand(command) {
-  if (!user.value) {
-    return;
-  }
-  command.action();
-  emit('close');
-}
-
-async function handleLogin() {
-  emit('close');
-  await router.push('/login');
-}
-</script> 
+<style scoped>
+/* Add your styles here */
+</style> 

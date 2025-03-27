@@ -489,12 +489,12 @@ function selectAllContent(e) {
 }
 
 .ProseMirror blockquote {
-  @apply border-l-4 border-amber-200 pl-4 my-4 py-2 bg-amber-50/50 text-amber-800 rounded-r;
+  @apply border-l-4 border-amber-200 pl-4 my-4 py-2 bg-amber-50/50 text-amber-800 rounded-r not-italic;
   @apply font-editor;
 }
 
 .ProseMirror blockquote p {
-  @apply tracking-tight text-amber-800/90 m-0 leading-relaxed;
+  @apply tracking-tight text-amber-800/90 m-0 leading-relaxed not-italic;
   font-size: 1rem;
 }
 
