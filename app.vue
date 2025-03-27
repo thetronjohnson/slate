@@ -31,14 +31,14 @@ useHead({
     
     // Open Graph / Facebook
     { property: 'og:type', content: 'website' },
-    { property: 'og:url', content: 'https://useslate.com' },
+    { property: 'og:url', content: 'https://slate.ink' },
     { property: 'og:title', content: 'Slate - Write better, faster with AI' },
     { property: 'og:description', content: 'A minimal local first writing app with AI superpowers. Write, edit, and improve your content with AI assistance.' },
     { property: 'og:image', content: '/og-image.png' },
     
     // Twitter
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:url', content: 'https://useslate.com' },
+    { name: 'twitter:url', content: 'https://slate.ink' },
     { name: 'twitter:title', content: 'Slate - Write better, faster with AI' },
     { name: 'twitter:description', content: 'A minimal local first writing app with AI superpowers. Write, edit, and improve your content with AI assistance.' },
     { name: 'twitter:image', content: '/og-image.png' },
