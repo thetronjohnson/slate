@@ -236,6 +236,9 @@
           >
             <Icon icon="lucide:file-down" class="w-4 h-4" />
           </button>
+          <a href="https://x.com/thetronjohnson" target="_blank" class="p-1.5 rounded-md hover:bg-gray-50 text-gray-500 hover:text-gray-900 transition-all duration-150 active:scale-95" title="Follow on X">
+            <Icon icon="lucide:twitter" class="w-4 h-4" />
+          </a>
           <div class="h-4 w-px bg-gray-200"></div>
           <!-- User Profile / Login Button -->
           <div class="relative" v-if="user">
