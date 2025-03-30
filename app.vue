@@ -4,15 +4,15 @@
 
 <script setup>
 import { watch, onMounted } from 'vue';
-import { useSupabaseUser } from '#imports';
 import posthog from 'posthog-js';
 
+const config = useRuntimeConfig();
 const user = useSupabaseUser();
 
 // Initialize PostHog
 if (process.client) {  // Only initialize on client-side
-  posthog.init('phc_8RgRBIfbpxArBSvKOXraxiG8qlguh1vd71fZxx0iKwt', {
-    api_host: 'https://eu.i.posthog.com',
+  posthog.init(config.public.posthogKey, {
+    api_host: config.public.posthogHost,
     person_profiles: 'identified_only',
     capture_pageview: false // We'll handle pageviews manually
   });

@@ -32,7 +32,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      appUrl: process.env.APP_URL
+      appUrl: process.env.APP_URL,
+      posthogKey: process.env.POSTHOG_KEY,
+      posthogHost: process.env.POSTHOG_HOST
     },
     openaiApiKey: process.env.OPENAI_API_KEY,
   }
