@@ -47,8 +47,8 @@
               type="text"
               class="w-full border-0 bg-transparent p-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 text-base"
               :placeholder="props.selectedContent === props.fullContent 
-                ? 'Ask Slate AI to help with the entire document...' 
-                : 'Ask Slate AI to help with the selected text...'"
+                ? 'Ask Slate AI to help with editing the document...' 
+                : 'Ask Slate AI to help with editing the selected text...'"
               @keyup.enter="handleSubmit"
               ref="inputRef"
             />

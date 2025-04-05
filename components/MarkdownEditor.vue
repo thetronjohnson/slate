@@ -286,7 +286,8 @@ defineExpose({
   editor,
   formatMenuItems,
   listMenuItems,
-  insertMenuItems
+  insertMenuItems,
+  handleCommandPalette
 });
 
 const showCommandPalette = ref(false);

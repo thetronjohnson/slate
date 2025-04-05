@@ -213,14 +213,16 @@
         </div>
 
         <div class="flex items-center gap-4">
-          <div class="text-xs text-gray-500 flex items-center gap-1.5">
-            <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">
-              {{ isMac ? '⌘' : 'Ctrl' }}
-            </kbd>
-            <span>+</span>
-            <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-gray-100 border border-gray-200 rounded">K</kbd>
-            <span class="ml-1">for Slate AI</span>
-          </div>
+          <button 
+            @click="editorRef?.handleCommandPalette()"
+            class="p-2 rounded-md bg-blue-100 text-blue-500 hover:text-blue-600 transition-all duration-150 active:scale-95 group"
+            title="Open AI Assistant (⌘K)"
+          >
+            <Icon 
+              icon="lucide:sparkles" 
+              class="w-5 h-5 transform group-hover:scale-110 transition-transform duration-150" 
+            />
+          </button>
           <div class="h-4 w-px bg-gray-200 mx-2"></div>
           <button 
             @click="showShareModal = true"
