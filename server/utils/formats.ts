@@ -87,46 +87,127 @@ export function processNestedContent(content: string): string {
   if (!content || content.trim() === '') return '';
   
   // Check if this is a checklist (contains [ ] or [x])
-  if (content.match(/^(\s*[-•*]\s+\[[ x]\])/m)) {
-    const lines = content.split('\n');
-    const items = lines.map(line => {
-      // Task list item
-      const taskMatch = line.match(/^(\s*)([-•*])\s+\[([ x])\]\s*(.+)/);
-      if (taskMatch) {
-        const [, , , checked, text] = taskMatch;
-        return `<li data-type="taskItem" data-checked="${checked === 'x'}">${processInlineFormatting(text)}</li>`;
-      }
-      
-      // Regular bullet point (fallback)
-      const bulletMatch = line.match(/^(\s*)([-•*])\s+(.+)/);
-      if (bulletMatch) {
-        const [, , , text] = bulletMatch;
-        return `<li>${processInlineFormatting(text)}</li>`;
-      }
-      
-      return null;
-    }).filter(Boolean);
+  const hasTaskItems = content.match(/^(\s*[-•*]\s+\[[ x]\])/m);
+  
+  const lines = content.split('\n');
+  let structure: { 
+    indent: number; 
+    html: string; 
+    isTask: boolean;
+    text: string;
+    parent: number | null;
+    children: number[];
+    level: number;
+  }[] = [];
+  
+  // First pass: parse all lines and their indentation levels
+  lines.forEach(line => {
+    // Task list item
+    const taskMatch = line.match(/^(\s*)([-•*])\s+\[([ x])\]\s*(.+)/);
+    if (taskMatch) {
+      const [, indent, , checked, text] = taskMatch;
+      structure.push({
+        indent: indent.length,
+        html: `<li data-type="taskItem" data-checked="${checked === 'x'}">${processInlineFormatting(text)}</li>`,
+        isTask: true,
+        text,
+        parent: null,
+        children: [],
+        level: 0
+      });
+      return;
+    }
     
-    return `<ul data-type="taskList">${items.join('')}</ul>`;
+    // Regular bullet point
+    const bulletMatch = line.match(/^(\s*)([-•*])\s+(.+)/);
+    if (bulletMatch) {
+      const [, indent, , text] = bulletMatch;
+      structure.push({
+        indent: indent.length,
+        html: `<li>${processInlineFormatting(text)}</li>`,
+        isTask: false,
+        text,
+        parent: null,
+        children: [],
+        level: 0
+      });
+      return;
+    }
+    
+    // Non-list content (treat as continuation of previous item)
+    if (line.trim() && structure.length > 0) {
+      const lastItem = structure[structure.length - 1];
+      // Remove the closing </li> tag, add the content, then add the closing tag back
+      lastItem.html = lastItem.html.replace(/<\/li>$/, ` ${processInlineFormatting(line.trim())}</li>`);
+      lastItem.text += ` ${line.trim()}`;
+    }
+  });
+  
+  // If no valid list items were found, treat as a paragraph
+  if (structure.length === 0) {
+    return `<p>${processInlineFormatting(content)}</p>`;
   }
   
-  // Check if this is a regular bullet list
-  if (content.match(/^(\s*[-•*]\s+)/m)) {
-    const lines = content.split('\n');
-    const items = lines.map(line => {
-      const bulletMatch = line.match(/^(\s*)([-•*])\s+(.+)/);
-      if (bulletMatch) {
-        const [, , , text] = bulletMatch;
-        return `<li>${processInlineFormatting(text)}</li>`;
-      }
-      return null;
-    }).filter(Boolean);
+  // Build parent-child relationships based on indentation
+  for (let i = 0; i < structure.length; i++) {
+    const currentItem = structure[i];
     
-    return `<ul>${items.join('')}</ul>`;
+    // Find the parent of the current item (the closest preceding item with less indentation)
+    for (let j = i - 1; j >= 0; j--) {
+      if (structure[j].indent < currentItem.indent) {
+        currentItem.parent = j;
+        structure[j].children.push(i);
+        break;
+      }
+    }
   }
   
-  // If it's not a recognized list type, treat as a paragraph
-  return `<p>${processInlineFormatting(content)}</p>`;
+  // Determine the level of each item (depth in the tree)
+  for (let i = 0; i < structure.length; i++) {
+    let level = 0;
+    let parentIdx = structure[i].parent;
+    
+    while (parentIdx !== null) {
+      level++;
+      parentIdx = structure[parentIdx].parent;
+    }
+    
+    structure[i].level = level;
+  }
+  
+  // Build the HTML structure recursively
+  function buildHtml(items: typeof structure, rootItems: number[]): string {
+    let result = '';
+    
+    for (const idx of rootItems) {
+      const item = items[idx];
+      result += item.html.replace(/<\/li>$/, '');
+      
+      if (item.children.length > 0) {
+        // Determine if the child list should be a task list
+        const childrenAreTasks = item.children.some(childIdx => items[childIdx].isTask);
+        const listType = childrenAreTasks ? ' data-type="taskList"' : '';
+        
+        // Add nested list
+        result += `<ul${listType}>${buildHtml(items, item.children)}</ul>`;
+      }
+      
+      result += '</li>';
+    }
+    
+    return result;
+  }
+  
+  // Get root level items (those with no parent)
+  const rootItems = structure
+    .map((item, idx) => item.parent === null ? idx : -1)
+    .filter(idx => idx !== -1);
+  
+  // Determine if the root list should be a task list
+  const rootListType = hasTaskItems ? ' data-type="taskList"' : '';
+  
+  // Build the final HTML
+  return `<ul${rootListType}>${buildHtml(structure, rootItems)}</ul>`;
 }
 
 /**
@@ -139,34 +220,7 @@ export function processTextContent(content: string): string {
   
   // Handle task lists and bullet points
   if (content.match(/^(\s*[-•*]\s+\[[ x]\]|\s*[-•*]\s+)/m)) {
-    const lines = content.split('\n');
-    
-    // Check if this is a checklist (contains [ ] or [x])
-    const isTaskList = lines.some(line => line.match(/^\s*[-•*]\s+\[[ x]\]/));
-    
-    const items = lines.map(line => {
-      // Task list item
-      const taskMatch = line.match(/^(\s*)([-•*])\s+\[([ x])\]\s*(.+)/);
-      if (taskMatch) {
-        const [, , , checked, text] = taskMatch;
-        return `<li data-type="taskItem" data-checked="${checked === 'x'}">${processInlineFormatting(text)}</li>`;
-      }
-      
-      // Regular bullet point
-      const bulletMatch = line.match(/^(\s*)([-•*])\s+(.+)/);
-      if (bulletMatch) {
-        const [, , , text] = bulletMatch;
-        return `<li>${processInlineFormatting(text)}</li>`;
-      }
-      
-      return null;
-    }).filter(Boolean);
-    
-    if (isTaskList) {
-      return `<ul data-type="taskList">${items.join('')}</ul>`;
-    } else {
-      return `<ul>${items.join('')}</ul>`;
-    }
+    return processNestedContent(content);
   }
   
   // Regular paragraph
@@ -275,7 +329,12 @@ export function formatTipTapHtml(text: string): string {
              const listItems = processNumberedList(remainingContent);
              numberedListItems = [...numberedListItems, ...listItems];
              inNumberedList = true;
-           } else {
+           } 
+           // Check if the remaining content contains bullet points or task items
+           else if (remainingContent.match(/^(\s*[-•*]\s+\[[ x]\]|\s*[-•*]\s+)/m)) {
+             result.push(processNestedContent(remainingContent));
+           }
+           else {
              // Process as regular content
              result.push(processTextContent(remainingContent));
            }
