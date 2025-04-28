@@ -106,7 +106,6 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
 import { Icon } from '@iconify/vue';
 import { useRouter } from 'vue-router';
 import { useSupabaseUser } from '#imports';

@@ -109,10 +109,7 @@ export default defineEventHandler(async (event) => {
       ],
     });
 
-    console.log(completion.choices[0].message.content, "\n\n");
-
     const formattedResponse = formatTipTapHtml(completion.choices[0].message.content || '');
-    console.log(formattedResponse);
     return {
       content: formattedResponse
     } as AiResponse;
