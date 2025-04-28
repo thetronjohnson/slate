@@ -24,9 +24,9 @@
 </template>
 
 <script setup>
+
 import { Icon } from '@iconify/vue'
 const client = useSupabaseClient()
-const user = useSupabaseUser()
 const router = useRouter()
 
 // Handle the OAuth callback
@@ -34,8 +34,6 @@ onMounted(async () => {
   try {
     const { error } = await client.auth.getSession()
     if (error) throw error
-    
-    // Redirect to the main page after successful login
     await router.push('/')
   } catch (error) {
     console.error('Error in auth callback:', error)
