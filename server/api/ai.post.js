@@ -208,7 +208,31 @@ function formatTipTapHtml(text) {
   function processNestedContent(content) {
     if (!content || content.trim() === '') return '';
     
-    // Check if this is a bullet list
+    // Check if this is a checklist (contains [ ] or [x])
+    if (content.match(/^(\s*[-•*]\s+\[[ x]\])/m)) {
+      const lines = content.split('\n');
+      const items = lines.map(line => {
+        // Task list item
+        const taskMatch = line.match(/^(\s*)([-•*])\s+\[([ x])\]\s*(.+)/);
+        if (taskMatch) {
+          const [, indent, bullet, checked, text] = taskMatch;
+          return `<li data-type="taskItem" data-checked="${checked === 'x'}">${processInlineFormatting(text)}</li>`;
+        }
+        
+        // Regular bullet point (fallback)
+        const bulletMatch = line.match(/^(\s*)([-•*])\s+(.+)/);
+        if (bulletMatch) {
+          const [, indent, bullet, text] = bulletMatch;
+          return `<li>${processInlineFormatting(text)}</li>`;
+        }
+        
+        return null;
+      }).filter(Boolean);
+      
+      return `<ul data-type="taskList">${items.join('')}</ul>`;
+    }
+    
+    // Check if this is a regular bullet list
     if (content.match(/^(\s*[-•*]\s+)/m)) {
       const lines = content.split('\n');
       const items = lines.map(line => {
