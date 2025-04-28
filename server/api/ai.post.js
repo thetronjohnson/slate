@@ -31,51 +31,204 @@ function formatTipTapHtml(text) {
       .replace(/~~(.*?)~~/g, '<s>$1</s>');
   };
 
-  // Process a section with a heading and content
-  const processSection = (section) => {
-    const lines = section.split('\n');
-    let result = [];
-    let currentHeading = null;
-    let currentContent = [];
+  // Clean up excessive line breaks and whitespace
+  text = text
+    .replace(/\n{3,}/g, '\n\n') // Replace 3+ consecutive line breaks with 2
+    .replace(/[ \t]+\n/g, '\n')  // Remove trailing whitespace
+    .trim();
+
+  // Split into sections by double newlines
+  const sections = text.split(/\n\n+/)
+    .map(section => section.trim())
+    .filter(Boolean);
+  
+  let result = [];
+  let inNumberedList = false;
+  let numberedListItems = [];
+  
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i];
     
-    // Process each line
+    // Handle code blocks
+    if (section.startsWith('```')) {
+      // If we were in a numbered list, close it before adding the code block
+      if (inNumberedList) {
+        result.push(`<ol>${numberedListItems.join('')}</ol>`);
+        numberedListItems = [];
+        inNumberedList = false;
+      }
+      
+      const lines = section.split('\n');
+      const language = lines[0].replace('```', '').trim();
+      const code = lines.slice(1, -1)
+        .map(line => line.trim())
+        .join('\n')
+        .trim();
+      result.push(`<pre><code class="language-${language}">${escapeHtml(code)}</code></pre>`);
+      continue;
+    }
+
+    // Handle blockquotes
+    if (section.startsWith('>')) {
+      // If we were in a numbered list, close it before adding the blockquote
+      if (inNumberedList) {
+        result.push(`<ol>${numberedListItems.join('')}</ol>`);
+        numberedListItems = [];
+        inNumberedList = false;
+      }
+      
+      const content = section.split('\n')
+        .map(line => line.replace(/^>\s*/, '').trim())
+        .filter(line => line)
+        .map(line => `<p>${processInlineFormatting(line)}</p>`)
+        .join('');
+      result.push(`<blockquote>${content}</blockquote>`);
+      continue;
+    }
+    
+    // Handle horizontal rule
+    if (section === '---' || section === '***' || section === '___') {
+      // If we were in a numbered list, close it before adding the horizontal rule
+      if (inNumberedList) {
+        result.push(`<ol>${numberedListItems.join('')}</ol>`);
+        numberedListItems = [];
+        inNumberedList = false;
+      }
+      
+      result.push('<hr>');
+      continue;
+    }
+    
+    // Check if this section is a heading
+    if (section.startsWith('#')) {
+      // If we were in a numbered list, close it before adding the heading
+      if (inNumberedList) {
+        result.push(`<ol>${numberedListItems.join('')}</ol>`);
+        numberedListItems = [];
+        inNumberedList = false;
+      }
+      
+      // Process the heading
+      const lines = section.split('\n');
+      const headingLine = lines[0];
+      const level = headingLine.match(/^#+/)[0].length;
+      const headingText = headingLine.replace(/^#+\s*/, '');
+      
+      result.push(`<h${level}>${processInlineFormatting(headingText)}</h${level}>`);
+      
+      // If there's content after the heading, process it separately
+      if (lines.length > 1) {
+        const remainingContent = lines.slice(1).join('\n').trim();
+        if (remainingContent) {
+          // Check if the remaining content is a numbered list
+          if (remainingContent.match(/^\s*\d+\.\s+/m)) {
+            const listItems = processNumberedList(remainingContent);
+            numberedListItems = [...numberedListItems, ...listItems];
+            inNumberedList = true;
+          } else {
+            // Process as regular content
+            result.push(processContent(remainingContent));
+          }
+        }
+      }
+      
+      continue;
+    }
+    
+    // Check if this section is a numbered list
+    if (section.match(/^\s*\d+\.\s+/m)) {
+      const listItems = processNumberedList(section);
+      numberedListItems = [...numberedListItems, ...listItems];
+      inNumberedList = true;
+      continue;
+    }
+    
+    // If we were in a numbered list, close it before adding non-list content
+    if (inNumberedList) {
+      result.push(`<ol>${numberedListItems.join('')}</ol>`);
+      numberedListItems = [];
+      inNumberedList = false;
+    }
+    
+    // Process regular content
+    result.push(processContent(section));
+  }
+  
+  // If we ended while still in a numbered list, close it
+  if (inNumberedList) {
+    result.push(`<ol>${numberedListItems.join('')}</ol>`);
+  }
+  
+  return result.join('\n');
+  
+  // Helper function to process a numbered list section
+  function processNumberedList(content) {
+    const lines = content.split('\n');
+    let items = [];
+    let currentItem = null;
+    let nestedContent = [];
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
+      if (!line) continue;
       
-      // Check if this is a heading
-      if (line.startsWith('#')) {
-        // If we have accumulated content under a previous heading, process it
-        if (currentHeading !== null && currentContent.length > 0) {
-          result.push(currentHeading);
-          result.push(processContent(currentContent.join('\n')));
-          currentContent = [];
+      const numberedMatch = line.match(/^(\s*)(\d+)\.(\s+)(.+)/);
+      
+      if (numberedMatch) {
+        // Process any accumulated nested content for the previous item
+        if (currentItem !== null && nestedContent.length > 0) {
+          const nestedHtml = processNestedContent(nestedContent.join('\n'));
+          items[items.length - 1] = items[items.length - 1].replace('</li>', nestedHtml + '</li>');
+          nestedContent = [];
         }
         
-        // Process the new heading
-        const level = line.match(/^#+/)[0].length;
-        const headingText = line.replace(/^#+\s*/, '');
-        currentHeading = `<h${level}>${processInlineFormatting(headingText)}</h${level}>`;
+        // Start a new numbered item
+        const [, indent, num, space, text] = numberedMatch;
+        // Process text, preserving existing formatting
+        let processedText = processInlineFormatting(text);
+        
+        items.push(`<li>${processedText}</li>`);
+        currentItem = items.length - 1;
       } else if (line.trim() !== '') {
-        // Add non-empty lines to current content
-        currentContent.push(line);
+        // This is nested content under the current numbered item
+        nestedContent.push(line);
       }
     }
     
-    // Process any remaining content
-    if (currentHeading !== null && currentContent.length > 0) {
-      result.push(currentHeading);
-      result.push(processContent(currentContent.join('\n')));
-    } else if (currentHeading !== null) {
-      result.push(currentHeading);
-    } else if (currentContent.length > 0) {
-      result.push(processContent(currentContent.join('\n')));
+    // Process any remaining nested content
+    if (nestedContent.length > 0 && items.length > 0) {
+      const nestedHtml = processNestedContent(nestedContent.join('\n'));
+      items[items.length - 1] = items[items.length - 1].replace('</li>', nestedHtml + '</li>');
     }
     
-    return result.join('\n');
-  };
+    return items;
+  }
   
-  // Process content blocks (lists, paragraphs, etc.)
-  const processContent = (content) => {
+  // Process nested content under a numbered item
+  function processNestedContent(content) {
+    if (!content || content.trim() === '') return '';
+    
+    // Check if this is a bullet list
+    if (content.match(/^(\s*[-•*]\s+)/m)) {
+      const lines = content.split('\n');
+      const items = lines.map(line => {
+        const bulletMatch = line.match(/^(\s*)([-•*])\s+(.+)/);
+        if (bulletMatch) {
+          const [, indent, bullet, text] = bulletMatch;
+          return `<li>${processInlineFormatting(text)}</li>`;
+        }
+        return null;
+      }).filter(Boolean);
+      
+      return `<ul>${items.join('')}</ul>`;
+    }
+    
+    // If it's not a recognized list type, treat as a paragraph
+    return `<p>${processInlineFormatting(content)}</p>`;
+  }
+  
+  // Process content blocks (paragraphs, bullet lists, etc.)
+  function processContent(content) {
     if (!content || content.trim() === '') return '';
     
     // Handle task lists and bullet points
@@ -110,79 +263,9 @@ function formatTipTapHtml(text) {
       }
     }
     
-    // Handle numbered lists
-    if (content.match(/^\s*\d+\.\s+/m)) {
-      const items = content.split('\n')
-        .map(line => {
-          const match = line.match(/^(\s*)\d+\.\s+(.+)/);
-          if (match) {
-            const [, indent, text] = match;
-            return `<li>${processInlineFormatting(text)}</li>`;
-          }
-          return null;
-        })
-        .filter(Boolean);
-      
-      return `<ol>${items.join('')}</ol>`;
-    }
-    
     // Regular paragraph
     return `<p>${processInlineFormatting(content)}</p>`;
-  };
-
-  // Clean up excessive line breaks and whitespace
-  text = text
-    .replace(/\n{3,}/g, '\n\n') // Replace 3+ consecutive line breaks with 2
-    .replace(/[ \t]+\n/g, '\n')  // Remove trailing whitespace
-    .trim();
-
-  // Split into sections by double newlines
-  const sections = text.split(/\n\n+/)
-    .map(section => section.trim())
-    .filter(Boolean);
-  
-  let result = [];
-  
-  for (const section of sections) {
-    // Handle code blocks
-    if (section.startsWith('```')) {
-      const lines = section.split('\n');
-      const language = lines[0].replace('```', '').trim();
-      const code = lines.slice(1, -1)
-        .map(line => line.trim())
-        .join('\n')
-        .trim();
-      result.push(`<pre><code class="language-${language}">${escapeHtml(code)}</code></pre>`);
-      continue;
-    }
-
-    // Handle blockquotes
-    if (section.startsWith('>')) {
-      const content = section.split('\n')
-        .map(line => line.replace(/^>\s*/, '').trim())
-        .filter(line => line)
-        .map(line => `<p>${processInlineFormatting(line)}</p>`)
-        .join('');
-      result.push(`<blockquote>${content}</blockquote>`);
-      continue;
-    }
-    
-    // Handle horizontal rule
-    if (section === '---' || section === '***' || section === '___') {
-      result.push('<hr>');
-      continue;
-    }
-    
-    // Check if the section contains headings
-    if (section.match(/^#+\s+/m)) {
-      result.push(processSection(section));
-    } else {
-      // Process as regular content
-      result.push(processContent(section));
-    }
   }
-  
-  return result.join('\n');
 }
 
 // System prompts for different scenarios
@@ -192,7 +275,8 @@ const SYSTEM_PROMPTS = {
   bullets: "Convert the text into well-organized bullet points. Start each bullet point with '•' on a new line.",
   checklist: "Create a comprehensive checklist. Start each item with a checkbox on a new line and organize items logically.",
   plan: "Create a detailed plan. Use '# ' for main headings, '## ' for subheadings, and '•' for bullet points.",
-  survey: "Create a well-structured survey. Use '## ' for sections and numbered items (1., 2., etc.) for questions."
+  survey: "Create a well-structured survey. Use '## ' for sections and numbered items (1., 2., etc.) for questions.",
+  numbered: "Convert the text into well-organized numbered items."
 };
 
 // Get the appropriate system prompt
@@ -201,6 +285,7 @@ function getSystemPrompt(prompt) {
   if (promptLower.includes('grammar')) return SYSTEM_PROMPTS.grammar;
   if (promptLower.includes('linkedin')) return SYSTEM_PROMPTS.linkedin;
   if (promptLower.includes('bullet')) return SYSTEM_PROMPTS.bullets;
+  if (promptLower.includes('numbered')) return SYSTEM_PROMPTS.numbered;
   if (promptLower.includes('checklist')) return SYSTEM_PROMPTS.checklist;
   if (promptLower.includes('plan')) return SYSTEM_PROMPTS.plan;
   if (promptLower.includes('survey')) return SYSTEM_PROMPTS.survey;
