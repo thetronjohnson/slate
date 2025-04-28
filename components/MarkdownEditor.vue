@@ -483,25 +483,28 @@ function selectAllContent(e) {
 }
 
 .ProseMirror ul[data-type="taskList"] li {
-  @apply flex items-center gap-2;
-  @apply font-editor;
+  @apply flex items-start gap-3;
+  margin-left: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > label {
-  @apply flex-shrink-0 flex items-center justify-center;
+  @apply mt-[3px] flex-shrink-0;
+  margin: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > div {
-  @apply flex-grow pt-[1px];
+  @apply flex-grow min-w-0;
+  margin-top: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
-  @apply h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-500 cursor-pointer;
+  @apply h-[18px] w-[18px] rounded border-gray-300 text-gray-900 focus:ring-gray-500 cursor-pointer;
   margin: 0;
 }
 
 .ProseMirror ul[data-type="taskList"] li > div p {
   @apply m-0 leading-normal;
+  padding-top: 1px;
 }
 
 .ProseMirror blockquote {
