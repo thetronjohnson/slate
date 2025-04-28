@@ -1,8 +1,39 @@
 import localforage from 'localforage';
-import { ref } from 'vue';
 
-export function useStorage() {
-  const isReady = ref(false);
+// Define interfaces for document types
+
+interface SlateFile {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface FilesData {
+  files: SlateFile[];
+  updatedAt: string;
+}
+
+// Define the storage interface
+interface StorageInterface {
+  saveDocument(id: string, content: string): Promise<void>;
+  getDocument(id: string): Promise<string | null>;
+  deleteDocument(id: string): Promise<void>;
+  saveSetting<T>(key: string, value: T): Promise<void>;
+  getSetting<T>(key: string): Promise<T | null>;
+  saveFiles(files: SlateFile[]): Promise<void>;
+  getFiles(): Promise<SlateFile[]>;
+}
+
+// Define the return type of the useStorage function
+interface StorageReturn {
+  storage: StorageInterface;
+  isReady: Ref<boolean>;
+  initStorage: () => Promise<void>;
+}
+
+export function useStorage(): StorageReturn {
+  const isReady = ref<boolean>(false);
 
   // Initialize stores
   const documentStore = localforage.createInstance({
@@ -21,7 +52,7 @@ export function useStorage() {
   });
 
   // Initialize storage
-  async function initStorage() {
+  async function initStorage(): Promise<void> {
     try {
       await Promise.all([
         documentStore.ready(),
@@ -35,8 +66,8 @@ export function useStorage() {
     }
   }
 
-  const storage = {
-    async saveDocument(id, content) {
+  const storage: StorageInterface = {
+    async saveDocument(id: string, content: string): Promise<void> {
       if (!isReady.value) await initStorage();
       try {
         if (!id || !content) {
@@ -50,10 +81,10 @@ export function useStorage() {
       }
     },
 
-    async getDocument(id) {
+    async getDocument(id: string): Promise<string | null> {
       if (!isReady.value) await initStorage();
       try {
-        const content = await documentStore.getItem(id);
+        const content = await documentStore.getItem<string>(id);
         return content || null;
       } catch (error) {
         console.error('Error getting document:', error);
@@ -61,7 +92,7 @@ export function useStorage() {
       }
     },
 
-    async deleteDocument(id) {
+    async deleteDocument(id: string): Promise<void> {
       if (!isReady.value) await initStorage();
       try {
         await documentStore.removeItem(id);
@@ -71,7 +102,7 @@ export function useStorage() {
       }
     },
 
-    async saveSetting(key, value) {
+    async saveSetting<T>(key: string, value: T): Promise<void> {
       if (!isReady.value) await initStorage();
       try {
         await settingsStore.setItem(key, value);
@@ -81,10 +112,10 @@ export function useStorage() {
       }
     },
 
-    async getSetting(key) {
+    async getSetting<T>(key: string): Promise<T | null> {
       if (!isReady.value) await initStorage();
       try {
-        const value = await settingsStore.getItem(key);
+        const value = await settingsStore.getItem<T>(key);
         return value || null;
       } catch (error) {
         console.error('Error getting setting:', error);
@@ -92,17 +123,17 @@ export function useStorage() {
       }
     },
 
-    async saveFiles(files) {
+    async saveFiles(files: SlateFile[]): Promise<void> {
       if (!isReady.value) await initStorage();
       try {
-        const serializableFiles = files.map(file => ({
+        const serializableFiles: SlateFile[] = files.map(file => ({
           id: file.id,
           name: file.name,
           createdAt: file.createdAt,
           updatedAt: file.updatedAt
         }));
 
-        const filesData = {
+        const filesData: FilesData = {
           files: serializableFiles,
           updatedAt: new Date().toISOString()
         };
@@ -114,10 +145,10 @@ export function useStorage() {
       }
     },
 
-    async getFiles() {
+    async getFiles(): Promise<SlateFile[]> {
       if (!isReady.value) await initStorage();
       try {
-        const filesData = await filesStore.getItem('files');
+        const filesData = await filesStore.getItem<FilesData>('files');
         return filesData?.files || [];
       } catch (error) {
         console.error('Error getting files:', error);
@@ -131,4 +162,4 @@ export function useStorage() {
     isReady,
     initStorage
   };
-} 
+}
