@@ -53,7 +53,7 @@ useHead({
   ],
   script: [
     {
-      src: 'https://app.chibi.sh/scripts/simple.js',
+      src: 'https://app.chibi.sh/scripts/simple.cjs',
       'data-project-id': 'slate-web',
       defer: true
     }
