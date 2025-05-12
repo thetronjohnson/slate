@@ -50,6 +50,13 @@ useHead({
   link: [
     { rel: 'icon', type: 'image/png', href: '/icon.png' },
     { rel: 'apple-touch-icon', href: '/icon.png' }
+  ],
+  script: [
+    {
+      src: 'https://app.chibi.sh/scripts/simple.js',
+      'data-project-id': 'slate-web',
+      defer: true
+    }
   ]
 });
 
