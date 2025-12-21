@@ -25,3 +25,7 @@ logs
 
 # Supabase
 supabase/
+
+# VSCode Extension build outputs
+vscode-extension/out
+vscode-extension/media

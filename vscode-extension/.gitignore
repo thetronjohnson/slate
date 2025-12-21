@@ -1,0 +1,6 @@
+node_modules
+out
+media/editor.js
+media/editor.css
+*.vsix
+.vscode-test
